@@ -86,6 +86,7 @@ try
     E.cfg          = cfg;
     E.stim_list    = stim_list;
     E.results_file = results_file;
+    E.results_csv  = results_csv;        % also written after every block (at each break)
     E.img_rect     = CenterRectOnPointd([0 0 img_px img_px], scr.center_X, scr.center_Y);
     E.draw_fix     = @() my_optimal_fixationpoint(win, scr.center_X, scr.center_Y, ...
                            cfg.fix_size_deg, cfg.fix_color, scr.bg, ppd);

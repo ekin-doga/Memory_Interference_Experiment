@@ -13,7 +13,9 @@ function seq = present_block(E, seq, b)
 % seq.key_time (GetSecs time) and seq.key_rt (relative to that trial's
 % image onset); a press during the image or ISI of trial t counts for trial t.
 % Hits/false alarms for the catch trials are scored afterwards with
-% score_catch (a summary is printed after every block).
+% score_catch (a summary is printed after every block). After every block the
+% results CSV (E.results_csv) is rewritten with all trials so far, scored, so
+% an up-to-date CSV exists at every break (unshown trials have NaN onsets).
 %
 % INPUTS:
 %   E - struct from run_encoding (win, scr, cfg, tex, img_rect, ...)
@@ -87,7 +89,8 @@ all_trials = find(seq.block == b);
 dur = seq.offset(all_trials) - seq.onset(all_trials);
 fprintf('Block %d (%s) done. Image duration: mean %.3f s, min %.3f, max %.3f\n', ...
     b, seq.condition{all_trials(1)}, mean(dur), min(dur), max(dur));
-[~, summary] = score_catch(seq, cfg, b);
+[seq_scored, summary] = score_catch(seq, cfg, b);
+writetable(seq_scored, E.results_csv);   % CSV with everything so far, at every break
 fprintf('  Attention check: %d of %d flowers detected, %d false alarms, mean RT %.3f s\n', ...
     summary.n_hit, summary.n_catch, summary.n_false_alarm, summary.mean_rt);
 end

@@ -97,6 +97,7 @@ cfg.enc.end_text = 'Done! Thank you very much.';
 cfg.mem.img_dur     = 0.500;   % each of the two images (s)
 cfg.mem.isi         = 1.000;   % fixation between image 1 and image 2 (s)
 cfg.mem.iti         = 1.000;   % fixation before image 1 of each trial (s)
+cfg.mem.csv_every   = 10;      % rewrite the results CSV every this many trials (the .mat is saved after every trial)
 
 % Key names (KbName); changed here, translated to key codes below
 cfg.mem.choice_keys = {'f', 'j'};                 % first image, second image

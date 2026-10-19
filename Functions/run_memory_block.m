@@ -9,8 +9,10 @@ function mseq = run_memory_block(E, mseq, b)
 %   -> confidence screen: 1-4, no time limit
 %
 % No breaks within a block (run_memory shows one break between the two
-% conditions). Results are saved to E.results_file after every trial, so an
-% ESC loses at most the current trial. Trials that already have a confidence
+% conditions). Results are saved to E.results_file (.mat) after every trial,
+% so an ESC loses at most the current trial. The results CSV (E.results_csv)
+% is rewritten every cfg.mem.csv_every completed trials and at the end of the
+% block. Trials that already have a confidence
 % rating (when resuming) are skipped.
 %
 % INPUTS:
@@ -60,6 +62,13 @@ for k = 1:numel(trials)
     mseq.conf_rt(t)    = t_key - mseq.conf_onset(t);
 
     save_results(E, mseq);
+
+    % CSV every cfg.mem.csv_every completed trials (counted over the session,
+    % so the rhythm continues after a resume); written after the confidence
+    % rating, before the next trial starts, so it does not affect timing
+    if mod(sum(~isnan(mseq.confidence)), m.csv_every) == 0
+        writetable(mseq, E.results_csv);
+    end
 end
 
 % fixation after the last trial
@@ -70,6 +79,7 @@ all_trials = find(mseq.block == b);
 acc = mean(mseq.correct(all_trials));
 fprintf('Memory block %d (%s) done: %d trials, %.0f%% correct, median choice RT %.2f s\n', ...
     b, mseq.condition{all_trials(1)}, numel(all_trials), 100 * acc, median(mseq.choice_rt(all_trials)));
+writetable(mseq, E.results_csv);   % CSV with everything so far, at the break
 end
 
 
