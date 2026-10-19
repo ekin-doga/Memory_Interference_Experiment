@@ -46,9 +46,9 @@ cfg.ISI_vals  = [0.900, 1.000, 1.100];  % possible ISI durations (s), sampled ra
 % A few flower images are mixed into every encoding block; participants press
 % space whenever they see a flower. Same flowers, same number per block in
 % both conditions. Catch trials are never the first or last trial of a block,
-% never back to back, and spread evenly over the block (one per segment). In
-% 'grouped' high-interference blocks they only go between two concepts, so a
-% concept's run of exemplars is never interrupted.
+% never back to back, and spread evenly over the block (one per segment).
+% Placement ignores concepts: in 'grouped' high-interference blocks a flower
+% can also appear in the middle of a concept's run of exemplars.
 cfg.catch.dir       = fullfile(cfg.stimuli_dir, 'Catch');
 cfg.catch.files     = {'flower_01b.jpg', 'flower_14s.jpg', 'flower_16s.jpg', 'flower_19s.jpg'};
 cfg.catch.per_image = 1;       % times each flower is shown per block (1 -> 4 catch trials per block)

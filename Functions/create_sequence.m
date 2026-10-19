@@ -30,8 +30,10 @@ function seq = create_sequence(stim_list, cfg, subj_id)
 % in both conditions). The block is cut into as many equal segments as there
 % are catch trials and each catch trial goes at a random spot in its own
 % segment, so they are spread over the block, never back to back and never
-% the first or last trial. In 'grouped' high blocks a catch trial only goes
-% between two concepts. Which flower goes where is random.
+% the first or last trial. Placement ignores concepts, so in 'grouped' high
+% blocks a flower can also appear in the middle of a concept's run (same rule
+% in both conditions, so catch trials are equally unpredictable). Which
+% flower goes where is random.
 %
 % If cfg.max_images_per_block is set (testing), each block is cut to that
 % many images (catch trials are added on top).
@@ -84,8 +86,7 @@ for c = 1:numel(cond_order)
         end
 
         % attention check: mix in the catch images
-        grouped = strcmp(cond_order{c}, 'high') && strcmp(cfg.high_order, 'grouped');
-        imgs = add_catch(imgs, cfg, grouped);
+        imgs = add_catch(imgs, cfg);
 
         n = height(imgs);
         imgs.repeat         = repmat(r, n, 1);
@@ -133,14 +134,13 @@ end
 end
 
 
-function imgs = add_catch(imgs, cfg, grouped)
+function imgs = add_catch(imgs, cfg)
 % ADD_CATCH - Inserts the catch trials (flowers) into one block
 % Slot j means: the catch trial comes right after image j (j = 1..n-1), so
 % it is never the first or last trial. The n-1 slots are cut into k equal
 % segments and each catch trial gets a random slot in its own segment, so
-% they are spread over the block and never back to back. In grouped blocks
-% only slots between two concepts are used (if a segment has none, which
-% only happens in test mode, any slot in it is used).
+% they are spread over the block and never back to back. Concepts are
+% ignored: in grouped blocks a flower can land inside a concept's run.
 imgs.is_catch = false(height(imgs), 1);
 files = cfg.catch.files;
 k = numel(files) * cfg.catch.per_image;
@@ -153,20 +153,11 @@ if k == 0
     return;
 end
 
-if grouped
-    ok = [~strcmp(imgs.subcategory(1:end-1), imgs.subcategory(2:end)); false];
-else
-    ok = true(n, 1);
-end
 edges = round(linspace(0, n - 1, k + 1));
 slots = zeros(k, 1);
 for s = 1:k
-    seg  = (edges(s) + 1):edges(s + 1);
-    cand = seg(ok(seg));
-    if isempty(cand)
-        cand = seg;
-    end
-    slots(s) = cand(randi(numel(cand)));
+    seg = (edges(s) + 1):edges(s + 1);
+    slots(s) = seg(randi(numel(seg)));
 end
 
 % which flower in which slot: each flower per_image times, random order
