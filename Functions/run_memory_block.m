@@ -26,6 +26,12 @@ win  = E.win;
 ifi  = E.scr.ifi;
 trials = find(mseq.block == b & isnan(mseq.confidence))';   % trials not done yet
 
+% for the progress print: condition 1 or 2 (order for this participant)
+in_block = find(mseq.block == b);
+part     = 1 + ~strcmp(mseq.condition{in_block(1)}, mseq.condition{1});
+n_trials = numel(in_block);
+outcome  = {'wrong', 'correct'};
+
 for k = 1:numel(trials)
     t = trials(k);
     % fixation (inter-trial interval)
@@ -62,6 +68,11 @@ for k = 1:numel(trials)
     mseq.conf_rt(t)    = t_key - mseq.conf_onset(t);
 
     save_results(E, mseq);
+
+    % progress print (command window)
+    fprintf('Memory | condition %d (%s) | trial %d/%d | %s, confidence %d\n', ...
+        part, mseq.condition{t}, mseq.trial_in_block(t), n_trials, ...
+        outcome{mseq.correct(t) + 1}, conf);
 
     % CSV every cfg.mem.csv_every completed trials (counted over the session,
     % so the rhythm continues after a resume); written after the confidence

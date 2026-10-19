@@ -41,6 +41,7 @@ Set `subj_id` and `windowed` at the top, then run it. Steps: `get_cfg` → parti
 - **Order:** conditions in separate blocks, in the same order as Day 1 (`condition_order.m`, shared with `create_sequence`). Random trial order within a block; the target is first in exactly half of each block's trials. Seed `subj_id + 2`.
 - **Breaks:** only one, between the two conditions (self-paced). No breaks within a block.
 - **Output** (in `Participants/sub-XXX/`): `sub-XXX_memory_sequence_<date>.csv` (planned trials), `sub-XXX_memory_results_<date>.mat` (saved after every trial), `sub-XXX_memory_results_<date>.csv` (every `cfg.mem.csv_every` = 10 trials, after each block and at the end). Every row has `subj_id` and `session_date`. Columns include `choice`, `correct`, `choice_rt` (from choice-screen onset), `confidence`, `conf_rt` and the measured image onsets.
+- **Progress print:** after every trial the command window shows e.g. `Memory | condition 1 (high) | trial 47/150 | correct, confidence 3` (condition = 1st or 2nd condition of this participant).
 - **Test mode:** `cfg.max_images_per_block` also caps the memory blocks.
 
 ## Triggers (removed for now)
