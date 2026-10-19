@@ -36,7 +36,7 @@ cfg.high_order = 'grouped';
 
 % TESTING ONLY: show at most this many images per block ([] = all 150).
 % Set back to [] for the real experiment!
-cfg.max_images_per_block = 10;
+cfg.max_images_per_block = 100;
 
 %% Timing
 cfg.stim_dur  = 0.500;              % stimulus duration (s)
@@ -54,7 +54,7 @@ cfg.catch.files     = {'flower_01b.jpg', 'flower_14s.jpg', 'flower_16s.jpg', 'fl
 cfg.catch.per_image = 1;       % times each flower is shown per block (1 -> 4 catch trials per block)
 cfg.catch.rt_window = [0.150, 2.000];   % a space press this long after catch onset (s) counts as a hit;
                                         % any other press is a false alarm
-cfg.catch.text      = 'Whenever you see a FLOWER, press SPACE as fast as you can.';
+cfg.catch.text      = 'Whenever you see one of these FLOWER images, press SPACE.';
 
 %% Display
 cfg.vdist           = 55;    % viewing distance (cm)
@@ -63,7 +63,7 @@ cfg.screen_width_cm = [];    % physical width of the visible screen area (cm);
                              % and fill it in for the EEG setup)
 
 % Sizes in degrees of visual angle (converted to pixels at runtime)
-cfg.img_size_deg  = 8;       % image width/height (images are square)
+cfg.img_size_deg  = 6;       % image width/height (images are square)
 cfg.catch.example_size_deg = 4;  % flowers on the start/break screens only (in the blocks they are img_size_deg)
 cfg.fix_size_deg  = 0.6;     % fixation point diameter (Thaler et al., 2013:
                              % 0.6 deg outer circle, 0.2 deg centre dot)

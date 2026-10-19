@@ -17,7 +17,7 @@ clearvars; sca;
 
 %% ===== SET THESE BEFORE EACH RUN =====
 subj_id  = 1;      % participant number
-windowed = true;    % true = 900x700 test window, false = fullscreen
+windowed = false;    % true = 900x700 test window, false = fullscreen
 %% ======================================
 
 root = fileparts(mfilename('fullpath'));
