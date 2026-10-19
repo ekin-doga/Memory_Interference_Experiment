@@ -110,7 +110,7 @@ try
                            cfg.fix_size_deg, cfg.fix_color, scr.bg, ppd);
 
     % preload every image once
-    DrawFormattedText(win, 'Loading images...', 'center', 'center', 0);
+    DrawFormattedText(win, cfg.mem.loading_text, 'center', 'center', 0);
     Screen('Flip', win);
     ids   = [mseq.first_id; mseq.second_id];
     paths = [mseq.first_path; mseq.second_path];
@@ -140,7 +140,7 @@ try
         end
     end
 
-    DrawFormattedText(win, 'Done! Thank you very much.', 'center', 'center', 0);
+    DrawFormattedText(win, cfg.mem.end_text, 'center', 'center', 0);
     Screen('Flip', win);
     WaitSecs(2);
 

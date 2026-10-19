@@ -54,7 +54,6 @@ cfg.catch.files     = {'flower_01b.jpg', 'flower_14s.jpg', 'flower_16s.jpg', 'fl
 cfg.catch.per_image = 1;       % times each flower is shown per block (1 -> 4 catch trials per block)
 cfg.catch.rt_window = [0.150, 2.000];   % a space press this long after catch onset (s) counts as a hit;
                                         % any other press is a false alarm
-cfg.catch.text      = 'Whenever you see one of these FLOWER images, press SPACE.';
 
 %% Display
 cfg.vdist           = 55;    % viewing distance (cm)
@@ -65,9 +64,29 @@ cfg.screen_width_cm = [];    % physical width of the visible screen area (cm);
 % Sizes in degrees of visual angle (converted to pixels at runtime)
 cfg.img_size_deg  = 6;       % image width/height (images are square)
 cfg.catch.example_size_deg = 4;  % flowers on the start/break screens only (in the blocks they are img_size_deg)
+cfg.catch.example_gap_deg  = 1;  % space between the last text line and the flowers on those screens
 cfg.fix_size_deg  = 0.6;     % fixation point diameter (Thaler et al., 2013:
                              % 0.6 deg outer circle, 0.2 deg centre dot)
 cfg.fix_color     = [0 0 0]; % fixation point color (0-1 range), black
+
+%% Day 1 encoding: text shown to participants (English for now)
+% \n = new line. block_break_text gets the block number and the number of
+% blocks (the two %d). The flowers are drawn under the start and break
+% screens automatically (show_text_with_catch).
+cfg.enc.catch_text = 'Whenever you see one of these FLOWER images, press SPACE.';
+cfg.enc.loading_text = 'Loading images...';
+cfg.enc.instruction_text = ['Pictures will appear one after the other.\n\n' ...
+    'Please try to remember them; you will be tested tomorrow.\n' ...
+    'Keep your eyes on the dot in the centre.\n\n' ...
+    cfg.enc.catch_text '\n\n' ...
+    'Press any key to start.'];
+cfg.enc.block_break_text = ['Break\n\nBlock %d of %d done.\n\n' ...
+    cfg.enc.catch_text '\n\n' ...
+    'Press any key to continue.'];
+cfg.enc.part_break_text = ['Break\n\nThe first part is done.\n\n' ...
+    cfg.enc.catch_text '\n\n' ...
+    'Press any key to continue with the second part.'];
+cfg.enc.end_text = 'Done! Thank you very much.';
 
 %% Day 2 memory test (run_memory)
 cfg.mem.img_dur     = 0.500;   % each of the two images (s)
@@ -94,6 +113,8 @@ cfg.mem.conf_text = ['How sure are you?\n\n' ...
     '1 = guess\n2 = rather unsure\n3 = rather sure\n4 = very sure'];
 cfg.mem.part_break_text = ['Break\n\nThe first part is done.\n\n' ...
     'Press any key to continue with the second part.'];
+cfg.mem.loading_text = 'Loading images...';
+cfg.mem.end_text     = 'Done! Thank you very much.';
 
 %% Response keys
 if exist('KbName', 'file')                 % Psychtoolbox installed

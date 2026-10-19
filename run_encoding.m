@@ -92,7 +92,7 @@ try
 
     % preload every image once (targets are shown cfg.repeat times, catch
     % flowers several times per block)
-    DrawFormattedText(win, 'Loading images...', 'center', 'center', 0);
+    DrawFormattedText(win, cfg.enc.loading_text, 'center', 'center', 0);
     Screen('Flip', win);
     [ids, first] = unique(seq.image_id);
     tex_map = containers.Map();
@@ -113,12 +113,7 @@ try
     end
 
     %% Start screen
-    show_text_with_catch(E, ['Pictures will appear one after the other.\n\n' ...
-        'Please try to remember them; you will be tested tomorrow.\n' ...
-        'Keep your eyes on the dot in the centre.\n\n' ...
-        cfg.catch.text '\n' ...
-        'These are the flowers (shown below).\n\n' ...
-        'Press any key to start.']);
+    show_text_with_catch(E, cfg.enc.instruction_text);
     wait_key(cfg);
 
     %% 6. Conditions, one after the other
@@ -132,16 +127,13 @@ try
     seq = parts{1}(E, seq);              % skips blocks/images already shown
 
     if ~first_done                       % no break if resuming in the second part
-        show_text_with_catch(E, ['Break\n\n' ...
-            'The first part is done.\n\n' ...
-            cfg.catch.text '\n\n' ...
-            'Press any key to continue with the second part.']);
+        show_text_with_catch(E, cfg.enc.part_break_text);
         wait_key(cfg);
     end
 
     seq = parts{2}(E, seq);
 
-    DrawFormattedText(win, 'Done! Thank you very much.', 'center', 'center', 0);
+    DrawFormattedText(win, cfg.enc.end_text, 'center', 'center', 0);
     Screen('Flip', win);
     WaitSecs(2);
 

@@ -19,9 +19,7 @@ for k = 1:numel(blocks)
     seq = present_block(E, seq, blocks(k));
 
     if k < numel(blocks)
-        show_text_with_catch(E, [sprintf('Break\n\nBlock %d of %d done.\n\n', blocks(k), max(seq.block)) ...
-            E.cfg.catch.text '\n\n' ...
-            'Press any key to continue.']);
+        show_text_with_catch(E, sprintf(E.cfg.enc.block_break_text, blocks(k), max(seq.block)));
         wait_key(E.cfg);
     end
 end
