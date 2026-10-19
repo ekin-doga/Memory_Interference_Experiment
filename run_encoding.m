@@ -2,7 +2,8 @@
 %
 %   1. get_cfg                       - settings
 %   2. create_participant            - participant folder
-%   3. create_stimuli_list_balanced  - targets/foils for this participant
+%   3. load Stimulus_lists/stimuli_sub-XXX.csv - targets/foils for this participant
+%      (pre-made with create_stimuli_list_balanced; never regenerated here)
 %   4. create_sequence               - trial order, conditions kept separate
 %   5. set_screen                    - open the window, preload the images
 %   6. run_encoding_high / run_encoding_low
@@ -29,7 +30,13 @@ cfg = get_cfg(subj_id);
 sub_dir = create_participant(subj_id, cfg);
 
 %% 3. Stimulus list and 4. sequence
-stim_list = create_stimuli_list_balanced(subj_id);
+list_file = fullfile(root, 'Stimulus_lists', sprintf('stimuli_sub-%03d.csv', subj_id));
+if ~isfile(list_file)
+    error('No stimulus list for participant %d (%s). Make it first with create_stimuli_list_balanced(%d).', ...
+        subj_id, list_file, subj_id);
+end
+stim_list = readtable(list_file, 'TextType', 'char');
+fprintf('Loaded %s (concept set %d)\n', list_file, stim_list.concept_set(1));
 seq       = create_sequence(stim_list, cfg, subj_id);
 seq.onset  = nan(height(seq), 1);    % measured image onset (GetSecs time)
 seq.offset = nan(height(seq), 1);    % measured image offset
@@ -58,7 +65,7 @@ try
                            cfg.fix_size_deg, cfg.fix_color, scr.bg, ppd);
 
     % preload every target once (each is shown cfg.repeat times)
-    DrawFormattedText(win, 'Bilder werden geladen...', 'center', 'center', 0);
+    DrawFormattedText(win, 'Loading images...', 'center', 'center', 0);
     Screen('Flip', win);
     [ids, first] = unique(seq.image_id);
     tex_map = containers.Map();
@@ -69,9 +76,10 @@ try
     E.tex = cellfun(@(id) tex_map(id), seq.image_id);   % texture per trial
 
     %% Start screen
-    DrawFormattedText(win, ['Bilder erscheinen nacheinander.\n\n' ...
-        'Bitte schaue auf den Punkt in der Mitte.\n\n' ...
-        'Drücke eine Taste, um zu beginnen.'], 'center', 'center', 0);
+    DrawFormattedText(win, ['Pictures will appear one after the other.\n\n' ...
+        'Please try to remember them; you will be tested tomorrow.\n' ...
+        'Keep your eyes on the dot in the centre.\n\n' ...
+        'Press any key to start.'], 'center', 'center', 0);
     Screen('Flip', win);
     wait_key(cfg);
 
@@ -84,15 +92,15 @@ try
 
     seq = parts{1}(E, seq);
 
-    DrawFormattedText(win, ['Pause\n\n' ...
-        'Der erste Teil ist geschafft.\n\n' ...
-        'Drücke eine Taste, um mit dem zweiten Teil weiterzumachen.'], 'center', 'center', 0);
+    DrawFormattedText(win, ['Break\n\n' ...
+        'The first part is done.\n\n' ...
+        'Press any key to continue with the second part.'], 'center', 'center', 0);
     Screen('Flip', win);
     wait_key(cfg);
 
     seq = parts{2}(E, seq);
 
-    DrawFormattedText(win, 'Geschafft! Vielen Dank.', 'center', 'center', 0);
+    DrawFormattedText(win, 'Done! Thank you very much.', 'center', 'center', 0);
     Screen('Flip', win);
     WaitSecs(2);
 

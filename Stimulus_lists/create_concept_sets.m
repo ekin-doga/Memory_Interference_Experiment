@@ -26,7 +26,7 @@ function sets = create_concept_sets(out_dir, pool_file)
 % you really want to rebuild.
 %
 % INPUTS:
-%   out_dir   - Folder for the output CSVs (default: ../Stimulus_lists)
+%   out_dir   - Folder for the output CSVs (default: Stimulus_lists, where this file is)
 %   pool_file - CSV of all stimuli (default: ../Stimuli/Selection20_resized/stimuli_list.csv)
 %
 % OUTPUTS:
@@ -43,10 +43,12 @@ function sets = create_concept_sets(out_dir, pool_file)
 n_sets     = 11;    % 165 / 15
 n_per_set  = 15;    % high-interference concepts per participant
 
-this_dir = fileparts(mfilename('fullpath'));
-stim_dir = fullfile(this_dir, '..', 'Stimuli', 'Selection20_resized');
+% Paths: this file is in <root>/Stimulus_lists/
+lists_dir = fileparts(mfilename('fullpath'));    % <root>/Stimulus_lists
+root      = fileparts(lists_dir);                % experiment root
+stim_dir  = fullfile(root, 'Stimuli', 'Selection20_resized');
 if nargin < 1 || isempty(out_dir)
-    out_dir = fullfile(this_dir, '..', 'Stimulus_lists');
+    out_dir = lists_dir;
 end
 if nargin < 2 || isempty(pool_file)
     pool_file = fullfile(stim_dir, 'stimuli_list.csv');
