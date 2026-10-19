@@ -35,6 +35,7 @@ while true
     if strcmpi(r, 'r')
         resume       = true;
         session_date = old_date{1};
+        fprintf('Resuming the session of %s.\n', session_date);
         return;
     elseif strcmpi(r, 'o')
         delete(fullfile(sub_dir, sprintf('sub-%03d_%s_*', subj_id, part)));
@@ -47,3 +48,4 @@ while true
     end
 end
 end
+

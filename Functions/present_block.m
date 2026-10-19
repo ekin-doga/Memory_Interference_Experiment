@@ -27,6 +27,15 @@ win    = E.win;
 ifi    = E.scr.ifi;
 trials = find(seq.block == b & isnan(seq.offset))';   % images not shown yet
 
+% for the progress print: part (1st/2nd condition), block within the
+% condition, and the image number counting targets only (1-150)
+in_block   = find(seq.block == b);
+target_nr  = zeros(height(seq), 1);
+target_nr(in_block) = cumsum(~seq.is_catch(in_block));
+n_targets  = sum(~seq.is_catch(in_block));
+part       = 1 + ~strcmp(seq.condition{in_block(1)}, seq.condition{1});   % 1 or 2
+n_blocks_c = max(seq.repeat);
+
 KbQueueCreate(cfg.deviceIndex);
 KbQueueStart(cfg.deviceIndex);
 queue_cleanup = onCleanup(@() KbQueueRelease(cfg.deviceIndex)); %#ok<NASGU>
@@ -47,6 +56,15 @@ for t = trials
 
     % save during the ISI, so a crash or ESC loses at most this image
     save_results(E, seq);
+
+    % progress print (command window)
+    if seq.is_catch(t)
+        fprintf('Condition %d (%s) | block %d/%d | catch (flower)\n', ...
+            part, seq.condition{t}, seq.repeat(t), n_blocks_c);
+    else
+        fprintf('Condition %d (%s) | block %d/%d | trial %d/%d\n', ...
+            part, seq.condition{t}, seq.repeat(t), n_blocks_c, target_nr(t), n_targets);
+    end
 
     % collect key presses while waiting (ESC stops, space = catch response)
     while GetSecs < next_onset - 0.05

@@ -112,8 +112,12 @@ try
         E.catch_tex(k) = Screen('MakeTexture', win, imread(fullfile(cfg.catch.dir, cfg.catch.files{k})));
     end
 
-    %% Start screen
-    show_text_with_catch(E, cfg.enc.instruction_text);
+    %% Start screen (after an interruption: the resume screen instead)
+    if resume
+        show_text_with_catch(E, cfg.enc.resume_text);
+    else
+        show_text_with_catch(E, cfg.enc.instruction_text);
+    end
     wait_key(cfg);
 
     %% 6. Conditions, one after the other

@@ -122,7 +122,12 @@ try
     E.tex1 = cellfun(@(id) tex_map(id), mseq.first_id);
     E.tex2 = cellfun(@(id) tex_map(id), mseq.second_id);
 
-    %% Instructions
+    %% Instructions (after an interruption: a resume screen first)
+    if resume
+        DrawFormattedText(win, cfg.mem.resume_text, 'center', 'center', 0);
+        Screen('Flip', win);
+        wait_key(cfg);
+    end
     DrawFormattedText(win, cfg.mem.instruction_text, 'center', 'center', 0);
     Screen('Flip', win);
     wait_key(cfg);
