@@ -152,6 +152,11 @@ try
 
 catch err
     sca; ShowCursor; Priority(0);
+    % mseq in the workspace is only updated after a whole block; the file has
+    % every completed trial, so load it back
+    if isfile(results_file)
+        load(results_file, 'mseq');
+    end
     if ~any(strcmp(err.identifier, {'memory:quit', 'encoding:quit'}))
         rethrow(err);
     end

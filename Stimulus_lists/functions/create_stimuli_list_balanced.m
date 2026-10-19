@@ -17,13 +17,17 @@ function stim_list = create_stimuli_list_balanced(subj_id)
 %   - High interference: positions 1-10 are targets and 11-20 foils in
 %     round 1 (participants 1-11); swapped in round 2 (participants 12-22).
 %   - Low interference: in each round, the 10 participants who have the
-%     concept as low interference each get their own pair (1+2, 3+4, ...,
-%     19+20), so all 20 exemplars are used. Target and foil swap in round 2.
+%     concept as low interference each get their own pair: position k as
+%     target and position k+10 as foil (k = 1-10). So within a round the
+%     low-interference targets/foils are exactly the high-interference
+%     targets/foils, and the Day 2 test pairs are the same in both
+%     conditions. Target and foil swap in round 2.
 %
 % Test pairs (column 'pair'): a target and a foil with the same pair number
 % are tested against each other in the Day 2 2AFC. High interference: rotation
 % position i is paired with i+10 (pairs 1-10); low interference: the
-% participant's single target and foil (pair 1). Pairs stay the same in round
+% participant's single target and foil (pair 1), i.e. also position k with
+% k+10. Pairs stay the same in round
 % 2, only target and foil swap, so every pair is tested once in each direction.
 %
 % Only participants 1-22 (one full cycle) are set up so far.
@@ -72,8 +76,8 @@ for i = 1:numel(concepts)
         % in this round who have the concept as low interference
         condition = 'low';
         pos = set_nr - (set_nr > concept_set);         % 1-10
-        targets = imgs(2 * pos - 1, :);
-        foils   = imgs(2 * pos, :);
+        targets = imgs(pos, :);                         % same pair as high
+        foils   = imgs(pos + 10, :);                    % interference pair pos
     end
 
     if round2

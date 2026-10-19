@@ -8,6 +8,13 @@ function seq = present_block(E, seq, b)
 % measured image durations. Images that already have an offset (when
 % resuming) are skipped.
 %
+% Key presses are collected with a PTB key queue, so a press is never missed,
+% also not during the image. The first space press per trial goes into
+% seq.key_time (GetSecs time) and seq.key_rt (relative to that trial's
+% image onset); a press during the image or ISI of trial t counts for trial t.
+% Hits/false alarms for the catch trials are scored afterwards with
+% score_catch (a summary is printed after every block).
+%
 % INPUTS:
 %   E - struct from run_encoding (win, scr, cfg, tex, img_rect, ...)
 %   seq - trial sequence (from create_sequence)
@@ -19,6 +26,10 @@ cfg    = E.cfg;
 win    = E.win;
 ifi    = E.scr.ifi;
 trials = find(seq.block == b & isnan(seq.offset))';   % images not shown yet
+
+KbQueueCreate(cfg.deviceIndex);
+KbQueueStart(cfg.deviceIndex);
+queue_cleanup = onCleanup(@() KbQueueRelease(cfg.deviceIndex)); %#ok<NASGU>
 
 E.draw_fix();
 vbl = Screen('Flip', win);
@@ -37,20 +48,30 @@ for t = trials
     % save during the ISI, so a crash or ESC loses at most this image
     save_results(E, seq);
 
-    % check for ESC while waiting
+    % collect key presses while waiting (ESC stops, space = catch response)
     while GetSecs < next_onset - 0.05
-        [down, ~, code] = KbCheck(cfg.deviceIndex);
-        if down && code(cfg.keys.Quit)
-            error('encoding:quit', 'Session stopped with ESC (block %d, trial %d).', b, t);
+        [pressed, first_press] = KbQueueCheck(cfg.deviceIndex);
+        if pressed
+            if first_press(cfg.keys.Quit)
+                error('encoding:quit', 'Session stopped with ESC (block %d, trial %d).', b, t);
+            end
+            if first_press(cfg.keys.respond) && isnan(seq.key_time(t))
+                seq.key_time(t) = first_press(cfg.keys.respond);
+                seq.key_rt(t)   = seq.key_time(t) - seq.onset(t);
+            end
         end
         WaitSecs(0.001);
     end
 end
+save_results(E, seq);   % includes a press during the last ISI
 
 all_trials = find(seq.block == b);
 dur = seq.offset(all_trials) - seq.onset(all_trials);
 fprintf('Block %d (%s) done. Image duration: mean %.3f s, min %.3f, max %.3f\n', ...
     b, seq.condition{all_trials(1)}, mean(dur), min(dur), max(dur));
+[~, summary] = score_catch(seq, cfg, b);
+fprintf('  Attention check: %d of %d flowers detected, %d false alarms, mean RT %.3f s\n', ...
+    summary.n_hit, summary.n_catch, summary.n_false_alarm, summary.mean_rt);
 end
 
 

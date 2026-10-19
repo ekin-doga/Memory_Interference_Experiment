@@ -45,6 +45,8 @@ fprintf('Loaded %s (concept set %d)\n', list_file, stim_list.concept_set(1));
 seq       = create_sequence(stim_list, cfg, subj_id);
 seq.onset  = nan(height(seq), 1);    % measured image onset (GetSecs time)
 seq.offset = nan(height(seq), 1);    % measured image offset
+seq.key_time = nan(height(seq), 1);  % first space press during this trial (GetSecs time)
+seq.key_rt   = nan(height(seq), 1);  % key_time - onset
 seq = addvars(seq, repmat(subj_id, height(seq), 1), repmat({session_date}, height(seq), 1), ...
     'Before', 1, 'NewVariableNames', {'subj_id', 'session_date'});
 
@@ -88,23 +90,35 @@ try
     E.draw_fix     = @() my_optimal_fixationpoint(win, scr.center_X, scr.center_Y, ...
                            cfg.fix_size_deg, cfg.fix_color, scr.bg, ppd);
 
-    % preload every target once (each is shown cfg.repeat times)
+    % preload every image once (targets are shown cfg.repeat times, catch
+    % flowers several times per block)
     DrawFormattedText(win, 'Loading images...', 'center', 'center', 0);
     Screen('Flip', win);
     [ids, first] = unique(seq.image_id);
     tex_map = containers.Map();
     for k = 1:numel(ids)
-        img = imread(fullfile(pool_dir, seq.path{first(k)}));
+        if seq.is_catch(first(k))
+            img = imread(fullfile(cfg.catch.dir, seq.path{first(k)}));
+        else
+            img = imread(fullfile(pool_dir, seq.path{first(k)}));
+        end
         tex_map(ids{k}) = Screen('MakeTexture', win, img);
     end
     E.tex = cellfun(@(id) tex_map(id), seq.image_id);   % texture per trial
 
+    % the catch flowers, for the start and break screens
+    E.catch_tex = zeros(1, numel(cfg.catch.files));
+    for k = 1:numel(cfg.catch.files)
+        E.catch_tex(k) = Screen('MakeTexture', win, imread(fullfile(cfg.catch.dir, cfg.catch.files{k})));
+    end
+
     %% Start screen
-    DrawFormattedText(win, ['Pictures will appear one after the other.\n\n' ...
+    show_text_with_catch(E, ['Pictures will appear one after the other.\n\n' ...
         'Please try to remember them; you will be tested tomorrow.\n' ...
         'Keep your eyes on the dot in the centre.\n\n' ...
-        'Press any key to start.'], 'center', 'center', 0);
-    Screen('Flip', win);
+        cfg.catch.text '\n' ...
+        'These are the flowers (shown below).\n\n' ...
+        'Press any key to start.']);
     wait_key(cfg);
 
     %% 6. Conditions, one after the other
@@ -118,10 +132,10 @@ try
     seq = parts{1}(E, seq);              % skips blocks/images already shown
 
     if ~first_done                       % no break if resuming in the second part
-        DrawFormattedText(win, ['Break\n\n' ...
+        show_text_with_catch(E, ['Break\n\n' ...
             'The first part is done.\n\n' ...
-            'Press any key to continue with the second part.'], 'center', 'center', 0);
-        Screen('Flip', win);
+            cfg.catch.text '\n\n' ...
+            'Press any key to continue with the second part.']);
         wait_key(cfg);
     end
 
@@ -133,11 +147,19 @@ try
 
     Screen('Close');
     sca; ShowCursor; Priority(0);
+    [seq, summary] = score_catch(seq, cfg);
+    fprintf('Attention check: %d of %d flowers detected (%.0f%%), %d false alarms, mean RT %.3f s\n', ...
+        summary.n_hit, summary.n_catch, 100 * summary.hit_rate, summary.n_false_alarm, summary.mean_rt);
     writetable(seq, results_csv);
     fprintf('Session finished. Results saved to %s (and .csv)\n', results_file);
 
 catch err
     sca; ShowCursor; Priority(0);
+    % seq in the workspace is only updated after a whole block; the file has
+    % every image shown so far, so load it back
+    if isfile(results_file)
+        load(results_file, 'seq');
+    end
     if ~strcmp(err.identifier, 'encoding:quit')
         rethrow(err);
     end
