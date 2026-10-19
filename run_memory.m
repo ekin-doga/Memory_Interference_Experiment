@@ -9,9 +9,11 @@
 %   6. run_memory_block         - per condition, with a break in between
 %
 % Output in Participants/sub-XXX/:
-%   memory_sequence.csv  - planned trials (written before the session)
-%   memory_results.mat   - mseq with responses, saved after every trial
-%   memory_results.csv   - the same table as CSV, written at the end
+%   sub-XXX_memory_sequence_<date>.csv - planned trials (written before the session)
+%   sub-XXX_memory_results_<date>.mat  - mseq with responses, saved after every trial
+%   sub-XXX_memory_results_<date>.csv  - the same table as CSV, written at the end
+% <date> is the day the session started (yyyy-MM-dd); every row also has
+% subj_id and session_date.
 
 clearvars; sca;
 
@@ -36,13 +38,11 @@ if ~isfolder(sub_dir)
     mkdir(sub_dir);
 end
 
-results_file = fullfile(sub_dir, 'memory_results.mat');
-if isfile(results_file)
-    r = input('This participant already has memory data. Overwrite [y/n]? ', 's');
-    if ~strcmpi(r, 'y')
-        error('Participant %d already has memory data and you chose not to overwrite.', subj_id);
-    end
-end
+[resume, session_date] = ask_resume(sub_dir, subj_id, 'memory');
+prefix        = fullfile(sub_dir, sprintf('sub-%03d_memory', subj_id));
+sequence_file = sprintf('%s_sequence_%s.csv', prefix, session_date);
+results_file  = sprintf('%s_results_%s.mat', prefix, session_date);
+results_csv   = sprintf('%s_results_%s.csv', prefix, session_date);
 
 %% 3. Stimulus list
 list_file = fullfile(root, 'Stimulus_lists', sprintf('stimuli_sub-%03d.csv', subj_id));
@@ -55,9 +55,11 @@ stim_list = readtable(list_file, 'TextType', 'char');
 mseq = create_memory_sequence(stim_list, cfg, subj_id);
 
 % same condition order as Day 1?
-enc_file = fullfile(sub_dir, 'sequence.csv');
-if isfile(enc_file)
-    enc = readtable(enc_file, 'TextType', 'char');
+enc_files = dir(fullfile(sub_dir, sprintf('sub-%03d_encoding_sequence_*.csv', subj_id)));
+if isempty(enc_files)
+    warning('No Day 1 encoding files found for participant %d.', subj_id);
+else
+    enc = readtable(fullfile(sub_dir, enc_files(end).name), 'TextType', 'char');
     if ~strcmp(enc.condition{1}, mseq.condition{1})
         warning('Day 1 started with %s, but the memory test starts with %s.', enc.condition{1}, mseq.condition{1});
     end
@@ -67,7 +69,27 @@ for v = {'onset1', 'offset1', 'onset2', 'choice_onset', 'choice', 'choice_rt', .
          'correct', 'conf_onset', 'confidence', 'conf_rt'}
     mseq.(v{1}) = nan(height(mseq), 1);
 end
-writetable(mseq, fullfile(sub_dir, 'memory_sequence.csv'));
+mseq = addvars(mseq, repmat(subj_id, height(mseq), 1), repmat({session_date}, height(mseq), 1), ...
+    'Before', 1, 'NewVariableNames', {'subj_id', 'session_date'});
+
+if resume
+    % continue with the saved sequence: trials with a confidence rating are done
+    old = load(results_file, 'mseq');
+    if height(old.mseq) ~= height(mseq) || ~isequal(old.mseq.first_id, mseq.first_id) ...
+            || ~isequal(old.mseq.second_id, mseq.second_id)
+        error(['The saved memory results of participant %d do not match the sequence made now ' ...
+               '(was get_cfg changed, e.g. max_images_per_block?).'], subj_id);
+    end
+    mseq = old.mseq;
+    n_done = sum(~isnan(mseq.confidence));
+    if n_done == height(mseq)
+        error('Participant %d already finished the memory test; nothing to resume.', subj_id);
+    end
+    fprintf('Resuming: %d of %d trials done, continuing with trial %d.\n', ...
+        n_done, height(mseq), n_done + 1);
+else
+    writetable(mseq, sequence_file);
+end
 
 pool_dir = fullfile(cfg.stimuli_dir, 'Selection20_resized');
 
@@ -102,32 +124,30 @@ try
 
     %% Instructions
     DrawFormattedText(win, cfg.mem.instruction_text, 'center', 'center', 0);
-    draw_trigger(win, cfg, 0);
     Screen('Flip', win);
     wait_key(cfg);
 
     %% 6. Blocks (one per condition)
-    n_blocks = max(mseq.block);
-    for b = 1:n_blocks
-        mseq = run_memory_block(E, mseq, b);
+    blocks = unique(mseq.block)';
+    blocks = blocks(arrayfun(@(b) any(isnan(mseq.confidence(mseq.block == b))), blocks)); % not done yet
+    for k = 1:numel(blocks)
+        mseq = run_memory_block(E, mseq, blocks(k));
 
-        if b < n_blocks
+        if k < numel(blocks)
             DrawFormattedText(win, cfg.mem.part_break_text, 'center', 'center', 0);
-            draw_trigger(win, cfg, 0);
             Screen('Flip', win);
             wait_key(cfg);
         end
     end
 
     DrawFormattedText(win, 'Done! Thank you very much.', 'center', 'center', 0);
-    draw_trigger(win, cfg, 0);
     Screen('Flip', win);
     WaitSecs(2);
 
     Screen('Close');
     sca; ShowCursor; Priority(0);
-    writetable(mseq, fullfile(sub_dir, 'memory_results.csv'));
-    fprintf('Session finished. %.0f%% correct overall. Results saved to %s\n', ...
+    writetable(mseq, results_csv);
+    fprintf('Session finished. %.0f%% correct overall. Results saved to %s (and .csv)\n', ...
         100 * mean(mseq.correct, 'omitnan'), results_file);
 
 catch err
@@ -136,5 +156,6 @@ catch err
         rethrow(err);
     end
     disp(err.message);
-    fprintf('All completed trials are saved in %s\n', results_file);
+    fprintf(['All completed trials are saved in %s\n' ...
+             'Run again with the same subj_id and choose r to resume.\n'], results_file);
 end

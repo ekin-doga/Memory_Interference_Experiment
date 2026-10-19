@@ -37,8 +37,6 @@ else
     [window, windowRect] = PsychImaging('OpenWindow', screen_ID, bg, [0 0 900 700]);
 end
 
-% Zero the trigger pixel (top-left) so it never shows the gray value
-Screen('FillRect', window, [0 0 0], [0 0 1 1]);
 Screen('Flip', window);
 
 [center_X, center_Y] = RectCenter(windowRect);

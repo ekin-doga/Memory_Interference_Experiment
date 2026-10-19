@@ -20,29 +20,29 @@ Stimulus preparation and Psychtoolbox presentation code for an EEG memory-interf
 
 The encoding session is started by `run_encoding.m` in the repo root. Set `subj_id` and `windowed` at the top, then run it. It adds `Functions/` to the path and runs these steps:
 
-`get_cfg` → `create_participant` (creates `Participants/sub-XXX/`, which is git-ignored) → load the pre-made `Stimulus_lists/stimuli_sub-XXX.csv` (errors if missing; lists are never regenerated during a session) → `create_sequence` → `set_screen` (preloads textures) → `run_encoding_high` / `run_encoding_low` (each calls `present_block` per block).
+`get_cfg` → `create_participant` (creates `Participants/sub-XXX/`, which is git-ignored) → `ask_resume` → load the pre-made `Stimulus_lists/stimuli_sub-XXX.csv` (errors if missing; lists are never regenerated during a session) → `create_sequence` → `set_screen` (preloads textures) → `run_encoding_high` / `run_encoding_low` (each calls `present_block` per block).
 
 - **Condition order:** the two conditions run separately, one after the other. Odd `subj_id` runs high first, even runs low first. Each condition has `cfg.repeat` blocks, and each block shows that condition's 150 targets once in a new random order.
 - **High-block order:** `cfg.high_order` in `get_cfg.m`. `'random'` (default) fully shuffles each high-interference block; `'grouped'` shows each concept's 10 exemplars back to back, with concept order and exemplar order reshuffled every repetition (a block never starts with the concept that ended the previous one). Low blocks are always fully shuffled.
-- **Output:** `results.mat` is saved after every block, and the measured image onset/offset is stored in `seq`. Pressing ESC raises the error `encoding:quit`. `run_encoding` catches it and keeps the completed blocks.
+- **Output** (in `Participants/sub-XXX/`): files are named `sub-XXX_encoding_<type>_<date>` with the date the session started (yyyy-MM-dd): `_sequence_<date>.csv` (planned), `_results_<date>.mat` (saved after every image, during the ISI) and `_results_<date>.csv` (at the end). Every row has `subj_id` and `session_date`; the .mat also holds `subj_id` and `session_date`. The measured image onset/offset is stored in `seq`. Pressing ESC raises the error `encoding:quit`. `run_encoding` catches it and keeps everything shown so far.
+- **Resume:** rerunning with the same `subj_id` asks resume/overwrite/quit `[r/o/q]` (in `ask_resume`, shared with Day 2). Resume keeps writing to the same files (original date); overwrite deletes that part's old files and starts new ones with today's date. Resume loads `seq` from `results.mat` and continues with the first image without a measured offset (mid-block, mid-concept), after the usual 1 s fixation. It errors if the saved sequence doesn't match the one made now (e.g. `get_cfg` changed). The same applies to `run_memory.m`: trials with a confidence rating are done, and the session continues with the next trial.
+- **Fixation point:** shown before and between images (ISI), never on top of an image (Day 1 and Day 2).
 - **Test mode:** if `cfg.max_images_per_block` in `get_cfg.m` is not `[]`, every block is cut to that many images. Set it back to `[]` for real sessions.
 - **Unused config:** `cfg.path_to_table` / `cfg.stimuli_subfolder` in `get_cfg.m` are leftovers from the old experiment and nothing reads them. Triggers are not set up yet.
 
 ## Day 2 memory test (`run_memory.m`)
 
-Set `subj_id` and `windowed` at the top, then run it. Steps: `get_cfg` → participant folder (from Day 1; asks before overwriting `memory_results.mat`) → load `Stimulus_lists/stimuli_sub-XXX.csv` → `create_memory_sequence` → `set_screen` → `run_memory_block` per condition, with a break between conditions.
+Set `subj_id` and `windowed` at the top, then run it. Steps: `get_cfg` → participant folder (from Day 1) → `ask_resume` → load `Stimulus_lists/stimuli_sub-XXX.csv` → `create_memory_sequence` → `set_screen` → `run_memory_block` per condition, with a break between conditions.
 
 - **Task:** exemplar-level 2AFC. One trial per target–foil pair (same concept, same `pair` number). Fixation `cfg.mem.iti` → image 1 (`cfg.mem.img_dur`, 500 ms) → fixation (`cfg.mem.isi`, 1000 ms) → image 2 (500 ms) → choice screen "first or second?" (keys `cfg.mem.choice_keys`, no time limit) → confidence 1–4 (`cfg.mem.conf_keys`, no time limit).
 - **Order:** conditions in separate blocks, in the same order as Day 1 (`condition_order.m`, shared with `create_sequence`). Random trial order within a block; the target is first in exactly half of each block's trials. Seed `subj_id + 2`.
 - **Breaks:** only one, between the two conditions (self-paced). No breaks within a block.
-- **Output** (in `Participants/sub-XXX/`): `memory_sequence.csv` (planned trials), `memory_results.mat` (saved after every trial), `memory_results.csv` (at the end). Columns include `choice`, `correct`, `choice_rt` (from choice-screen onset), `confidence`, `conf_rt` and the measured image onsets.
+- **Output** (in `Participants/sub-XXX/`): `sub-XXX_memory_sequence_<date>.csv` (planned trials), `sub-XXX_memory_results_<date>.mat` (saved after every trial), `sub-XXX_memory_results_<date>.csv` (at the end). Every row has `subj_id` and `session_date`. Columns include `choice`, `correct`, `choice_rt` (from choice-screen onset), `confidence`, `conf_rt` and the measured image onsets.
 - **Test mode:** `cfg.max_images_per_block` also caps the memory blocks.
 
-## Triggers (not active yet)
+## Triggers (removed for now)
 
-- `draw_trigger(win, cfg, code)` is called before every `Screen('Flip')` in the memory test, so each code is time-locked to the frame it belongs to. With `cfg.triggers.enabled = false` it draws a black top-left pixel. The ViewPixx RGB encoding still has to be ported from `Functions_Old_Experiment/ViewPixxTrigger.m`; colours are 0–1 here, so divide its 0–255 values by 255.
-- Memory codes are in `cfg.triggers.mem`: image 1 onset 111/112 (high target/foil), 121/122 (low); image 2 onset 113/114, 123/124; choice screen 130; choice first/second 131/132 (with the confidence-screen flip); confidence 141–144 (with the next fixation flip).
-- The encoding code (`present_block`) does not call `draw_trigger` yet. Add it before each flip there too; otherwise the trigger pixel shows the gray background, which the ViewPixx would read as a code.
+All trigger code was taken out of the session code (no `draw_trigger` calls, no `cfg.triggers`, no trigger-pixel zeroing in `set_screen`). `Functions/draw_trigger.m` is unused and kept as a starting point. When triggers are added back, see the project note "Trigger Information": draw the top-left pixel on **every** flip (gray background decodes to 6 on the ViewPixx), go 0 → code → 0, and port the encoding from `Functions_Old_Experiment/ViewPixxTrigger.m` (divide its 0–255 colours by 255).
 
 Concept sets are created once, before data collection:
 

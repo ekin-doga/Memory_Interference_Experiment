@@ -1,7 +1,7 @@
 % RUN_ENCODING -
 %
 %   1. get_cfg                       - settings
-%   2. create_participant            - participant folder
+%   2. create_participant / ask_resume - participant folder; resume or overwrite earlier data
 %   3. load Stimulus_lists/stimuli_sub-XXX.csv - targets/foils for this participant
 %      (pre-made with create_stimuli_list_balanced; never regenerated here)
 %   4. create_sequence               - trial order, conditions kept separate
@@ -26,8 +26,13 @@ addpath(fullfile(root, 'Functions'));
 %% 1. Settings
 cfg = get_cfg(subj_id);
 
-%% 2. Participant folder (asks before overwriting existing data)
+%% 2. Participant folder and output files (if data exists: resume, overwrite or quit)
 sub_dir = create_participant(subj_id, cfg);
+[resume, session_date] = ask_resume(sub_dir, subj_id, 'encoding');
+prefix        = fullfile(sub_dir, sprintf('sub-%03d_encoding', subj_id));
+sequence_file = sprintf('%s_sequence_%s.csv', prefix, session_date);
+results_file  = sprintf('%s_results_%s.mat', prefix, session_date);
+results_csv   = sprintf('%s_results_%s.csv', prefix, session_date);
 
 %% 3. Stimulus list and 4. sequence
 list_file = fullfile(root, 'Stimulus_lists', sprintf('stimuli_sub-%03d.csv', subj_id));
@@ -40,7 +45,26 @@ fprintf('Loaded %s (concept set %d)\n', list_file, stim_list.concept_set(1));
 seq       = create_sequence(stim_list, cfg, subj_id);
 seq.onset  = nan(height(seq), 1);    % measured image onset (GetSecs time)
 seq.offset = nan(height(seq), 1);    % measured image offset
-writetable(seq, fullfile(sub_dir, 'sequence.csv'));
+seq = addvars(seq, repmat(subj_id, height(seq), 1), repmat({session_date}, height(seq), 1), ...
+    'Before', 1, 'NewVariableNames', {'subj_id', 'session_date'});
+
+if resume
+    % continue with the saved sequence: images with a measured offset are done
+    old = load(results_file, 'seq');
+    if height(old.seq) ~= height(seq) || ~isequal(old.seq.image_id, seq.image_id)
+        error(['The saved results of participant %d do not match the sequence made now ' ...
+               '(was get_cfg changed, e.g. max_images_per_block or high_order?).'], subj_id);
+    end
+    seq = old.seq;
+    n_done = sum(~isnan(seq.offset));
+    if n_done == height(seq)
+        error('Participant %d already finished encoding; nothing to resume.', subj_id);
+    end
+    fprintf('Resuming: %d of %d images already shown, continuing with image %d.\n', ...
+        n_done, height(seq), n_done + 1);
+else
+    writetable(seq, sequence_file);
+end
 
 pool_dir = fullfile(cfg.stimuli_dir, 'Selection20_resized');
 
@@ -59,7 +83,7 @@ try
     E.scr          = scr;
     E.cfg          = cfg;
     E.stim_list    = stim_list;
-    E.results_file = fullfile(sub_dir, 'results.mat');
+    E.results_file = results_file;
     E.img_rect     = CenterRectOnPointd([0 0 img_px img_px], scr.center_X, scr.center_Y);
     E.draw_fix     = @() my_optimal_fixationpoint(win, scr.center_X, scr.center_Y, ...
                            cfg.fix_size_deg, cfg.fix_color, scr.bg, ppd);
@@ -90,13 +114,16 @@ try
         parts = {@run_encoding_low, @run_encoding_high};
     end
 
-    seq = parts{1}(E, seq);
+    first_done = all(~isnan(seq.offset(strcmp(seq.condition, seq.condition{1}))));
+    seq = parts{1}(E, seq);              % skips blocks/images already shown
 
-    DrawFormattedText(win, ['Break\n\n' ...
-        'The first part is done.\n\n' ...
-        'Press any key to continue with the second part.'], 'center', 'center', 0);
-    Screen('Flip', win);
-    wait_key(cfg);
+    if ~first_done                       % no break if resuming in the second part
+        DrawFormattedText(win, ['Break\n\n' ...
+            'The first part is done.\n\n' ...
+            'Press any key to continue with the second part.'], 'center', 'center', 0);
+        Screen('Flip', win);
+        wait_key(cfg);
+    end
 
     seq = parts{2}(E, seq);
 
@@ -106,7 +133,8 @@ try
 
     Screen('Close');
     sca; ShowCursor; Priority(0);
-    fprintf('Session finished. Results saved to %s\n', E.results_file);
+    writetable(seq, results_csv);
+    fprintf('Session finished. Results saved to %s (and .csv)\n', results_file);
 
 catch err
     sca; ShowCursor; Priority(0);
@@ -114,5 +142,6 @@ catch err
         rethrow(err);
     end
     disp(err.message);
-    fprintf('All completed blocks are saved in %s\n', fullfile(sub_dir, 'results.mat'));
+    fprintf(['All images shown so far are saved in %s\n' ...
+             'Run again with the same subj_id and choose r to resume.\n'], results_file);
 end

@@ -60,7 +60,7 @@ cfg.mem.isi         = 1.000;   % fixation between image 1 and image 2 (s)
 cfg.mem.iti         = 1.000;   % fixation before image 1 of each trial (s)
 
 % Key names (KbName); changed here, translated to key codes below
-cfg.mem.choice_keys = {'1!', '2@'};               % first image, second image
+cfg.mem.choice_keys = {'f', 'j'};                 % first image, second image
 cfg.mem.conf_keys   = {'1!', '2@', '3#', '4$'};   % 1 = guess ... 4 = very sure
 
 % Text shown to participants (English for now)
@@ -68,13 +68,13 @@ cfg.mem.instruction_text = ['Memory test\n\n' ...
     'In each trial you will see two pictures, one after the other.\n' ...
     'One of them you saw yesterday, the other one is new.\n\n' ...
     'After the second picture, press\n' ...
-    '1 if you saw the FIRST picture yesterday\n' ...
-    '2 if you saw the SECOND picture yesterday.\n\n' ...
+    'F if you saw the FIRST picture yesterday\n' ...
+    'J if you saw the SECOND picture yesterday.\n\n' ...
     'Then rate how sure you are (1 = guess ... 4 = very sure).\n' ...
     'Take as much time as you need.\n\n' ...
     'Press any key to start.'];
 cfg.mem.choice_text = ['Which picture did you see yesterday?\n\n' ...
-    '1 = first picture          2 = second picture'];
+    'F = first picture          J = second picture'];
 cfg.mem.conf_text = ['How sure are you?\n\n' ...
     '1 = guess\n2 = rather unsure\n3 = rather sure\n4 = very sure'];
 cfg.mem.part_break_text = ['Break\n\nThe first part is done.\n\n' ...
@@ -94,19 +94,6 @@ else                                       % no Psychtoolbox: settings and seque
     cfg.keys.conf     = nan(1, numel(cfg.mem.conf_keys));
     warning('Psychtoolbox not found: key codes set to NaN. You can build sequences, but not run the experiment.');
 end
-
-%% Trigger settings
-% Not used yet: with enabled = false, draw_trigger only draws a black pixel.
-% The ViewPixx encoding still has to be added to draw_trigger.m.
-cfg.triggers.enabled = false;
-
-% Day 2 memory test codes (sent with the flip they belong to)
-%   img1 / img2: rows = high, low; columns = target, foil
-cfg.triggers.mem.img1          = [111 112; 121 122];   % first image onset
-cfg.triggers.mem.img2          = [113 114; 123 124];   % second image onset
-cfg.triggers.mem.choice_screen = 130;                  % choice screen onset
-cfg.triggers.mem.choice        = [131 132];            % chose first / second (with confidence screen onset)
-cfg.triggers.mem.confidence    = [141 142 143 144];    % confidence 1-4 (with next fixation onset)
 
 cfg.deviceIndex = [];
 
