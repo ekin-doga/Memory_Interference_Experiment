@@ -1,4 +1,4 @@
-function show_text_with_catch(E, txt)
+function show_text_with_catch(E, txt, code)
 % SHOW_TEXT_WITH_CATCH - Text screen with the catch flowers underneath
 %
 % Draws txt (DrawFormattedText) with the catch images (E.catch_tex, from
@@ -11,6 +11,13 @@ function show_text_with_catch(E, txt)
 % Flower size: cfg.catch.example_size_deg (smaller than in the blocks). If
 % text and flowers do not fit the window (e.g. the 900x700 test window), the
 % flowers are made smaller and a warning is printed once.
+%
+% code (optional, default 0) is the EEG trigger sent when the screen appears
+% (e.g. cfg.triggers.experiment_start).
+
+if nargin < 3
+    code = 0;
+end
 
 win  = E.win;
 rect = E.scr.windowRect;
@@ -52,5 +59,5 @@ for k = 1:n
     x = x0 + (k - 1) * (sz + gap_x);
     Screen('DrawTexture', win, E.catch_tex(k), [], [x, y0, x + sz, y0 + sz]);
 end
-Screen('Flip', win);
+flip_trig(win, E.cfg, code);
 end

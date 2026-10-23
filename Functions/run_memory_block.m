@@ -6,85 +6,93 @@ function mseq = run_memory_block(E, mseq, b)
 %   -> image 1 (cfg.mem.img_dur) -> fixation (cfg.mem.isi)
 %   -> image 2 (cfg.mem.img_dur)
 %   -> choice screen: "first or second?", no time limit
-%   -> confidence screen: 1-4, no time limit
 %
 % No breaks within a block (run_memory shows one break between the two
 % conditions). Results are saved to E.results_file (.mat) after every trial,
 % so an ESC loses at most the current trial. The results CSV (E.results_csv)
 % is rewritten every cfg.mem.csv_every completed trials and at the end of the
-% block. Trials that already have a confidence
-% rating (when resuming) are skipped.
+% block. Trials that already have a choice (when resuming) are skipped.
 %
 % INPUTS:
 %   E    - struct from run_memory (win, scr, cfg, tex1, tex2, img_rect, ...)
 %   mseq - memory sequence (from create_memory_sequence)
 %   b    - block number
+%
+% EEG triggers (codes in get_cfg, cfg.triggers; every flip goes through
+% flip_trig, so each code is followed by 0 one frame later):
+%   mseq.trig_iti         ITI fixation (block_start for the first trial of the block)
+%   mseq.trig_image1/2    image onsets (target 128 / foil 160 + category number)
+%   mseq.trig_isi         fixation between the images
+%   mseq.trig_choice      choice screen (= image 2 offset)
+%   (columns made by add_triggers_memory; the first trial after a resume
+%   sends block_start instead of trig_iti)
+%   block_end             fixation after the last trial
+% Key presses send no trigger (their times are in choice_rt).
 
 cfg  = E.cfg;
 m    = cfg.mem;
 win  = E.win;
 ifi  = E.scr.ifi;
-trials = find(mseq.block == b & isnan(mseq.confidence))';   % trials not done yet
+trials = find(mseq.block == b & isnan(mseq.choice))';   % trials not done yet
 
 % for the progress print: condition 1 or 2 (order for this participant)
 in_block = find(mseq.block == b);
 part     = 1 + ~strcmp(mseq.condition{in_block(1)}, mseq.condition{1});
 n_trials = numel(in_block);
 outcome  = {'wrong', 'correct'};
+cond     = mseq.condition{in_block(1)};     % 'high' or 'low'
+tr       = cfg.triggers;
 
 for k = 1:numel(trials)
     t = trials(k);
     % fixation (inter-trial interval)
     E.draw_fix();
-    vbl = Screen('Flip', win);
+    % (first trial of this run of the block: block_start, also when resuming)
+    if k == 1
+        vbl = flip_trig(win, cfg, tr.block_start.(cond));
+    else
+        vbl = flip_trig(win, cfg, mseq.trig_iti(t));
+    end
 
     % image 1
     Screen('DrawTexture', win, E.tex1(t), [], E.img_rect);
-    mseq.onset1(t) = Screen('Flip', win, vbl + m.iti - ifi/2);
+    mseq.onset1(t) = flip_trig(win, cfg, mseq.trig_image1(t), vbl + m.iti - ifi/2);
 
     % fixation between the images
     E.draw_fix();
-    mseq.offset1(t) = Screen('Flip', win, mseq.onset1(t) + m.img_dur - ifi/2);
+    mseq.offset1(t) = flip_trig(win, cfg, mseq.trig_isi(t), mseq.onset1(t) + m.img_dur - ifi/2);
 
     % image 2
     Screen('DrawTexture', win, E.tex2(t), [], E.img_rect);
-    mseq.onset2(t) = Screen('Flip', win, mseq.offset1(t) + m.isi - ifi/2);
+    mseq.onset2(t) = flip_trig(win, cfg, mseq.trig_image2(t), mseq.offset1(t) + m.isi - ifi/2);
 
     % choice screen (replaces image 2)
     DrawFormattedText(win, m.choice_text, 'center', 'center', 0);
-    mseq.choice_onset(t) = Screen('Flip', win, mseq.onset2(t) + m.img_dur - ifi/2);
+    mseq.choice_onset(t) = flip_trig(win, cfg, mseq.trig_choice(t), mseq.onset2(t) + m.img_dur - ifi/2);
 
     [choice, t_key] = wait_for_keys(cfg, cfg.keys.choice);
     mseq.choice(t)    = choice;
     mseq.choice_rt(t) = t_key - mseq.choice_onset(t);
     mseq.correct(t)   = double(choice == mseq.correct_choice(t));
 
-    % confidence screen
-    DrawFormattedText(win, m.conf_text, 'center', 'center', 0);
-    mseq.conf_onset(t) = Screen('Flip', win);
-
-    [conf, t_key] = wait_for_keys(cfg, cfg.keys.conf);
-    mseq.confidence(t) = conf;
-    mseq.conf_rt(t)    = t_key - mseq.conf_onset(t);
-
     save_results(E, mseq);
 
     % progress print (command window)
-    fprintf('Memory | condition %d (%s) | trial %d/%d | %s, confidence %d\n', ...
+    fprintf('Memory | condition %d (%s) | trial %d/%d | %s\n', ...
         part, mseq.condition{t}, mseq.trial_in_block(t), n_trials, ...
-        outcome{mseq.correct(t) + 1}, conf);
+        outcome{mseq.correct(t) + 1});
 
     % CSV every cfg.mem.csv_every completed trials (counted over the session,
-    % so the rhythm continues after a resume); written after the confidence
-    % rating, before the next trial starts, so it does not affect timing
-    if mod(sum(~isnan(mseq.confidence)), m.csv_every) == 0
+    % so the rhythm continues after a resume); written after the choice,
+    % before the next trial starts, so it does not affect timing
+    if mod(sum(~isnan(mseq.choice)), m.csv_every) == 0
         writetable(mseq, E.results_csv);
     end
 end
 
 % fixation after the last trial
 E.draw_fix();
-Screen('Flip', win);
+flip_trig(win, cfg, tr.block_end);
 
 all_trials = find(mseq.block == b);
 acc = mean(mseq.correct(all_trials));

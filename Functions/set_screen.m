@@ -4,7 +4,7 @@ function [screen_cfg, window] = set_screen(ID, W, cfg)
 % INPUTS:
 %   ID  - 1 = main screen (lowest number), 2 = external screen (highest number)
 %   W   - 0 = fullscreen (for the experiment), 1 = 900x700 window (for testing)
-%   cfg - config from get_cfg (uses cfg.vdist and cfg.screen_width_cm)
+%   cfg - config from get_cfg (uses cfg.vdist, cfg.screen_width_cm, cfg.triggers)
 %
 % OUTPUTS:
 %   screen_cfg - struct with screen_ID, bg, white, windowRect, center_X,
@@ -37,7 +37,9 @@ else
     [window, windowRect] = PsychImaging('OpenWindow', screen_ID, bg, [0 0 900 700]);
 end
 
-Screen('Flip', window);
+% trigger pixel to 0 straight away: until something draws it, it shows the
+% gray background, which the ViewPixx sends as code 6
+flip_trig(window, cfg, 0);
 
 [center_X, center_Y] = RectCenter(windowRect);
 ifi = Screen('GetFlipInterval', window);

@@ -100,7 +100,6 @@ cfg.mem.csv_every   = 10;      % rewrite the results CSV every this many trials 
 
 % Key names (KbName); changed here, translated to key codes below
 cfg.mem.choice_keys = {'f', 'j'};                 % first image, second image
-cfg.mem.conf_keys   = {'1!', '2@', '3#', '4$'};   % 1 = guess ... 4 = very sure
 
 % Text shown to participants (English for now)
 cfg.mem.instruction_text = ['Memory test\n\n' ...
@@ -109,12 +108,9 @@ cfg.mem.instruction_text = ['Memory test\n\n' ...
     'After the second image, press\n' ...
     'F if you have previously seen the FIRST image.\n' ...
     'J if you have previously seen the SECOND image.\n\n' ...
-    'Then rate how sure you are (1 = guess ... 4 = very sure).\n' ...
     'Press any key to start.'];
 cfg.mem.choice_text = ['Which image have youpreviously seen?\n\n' ...
     'F = first picture          J = second picture'];
-cfg.mem.conf_text = ['How sure are you?\n\n' ...
-    '1 = guess\n2 = rather unsure\n3 = rather sure\n4 = very sure'];
 cfg.mem.part_break_text = ['Break\n\nThe first part is done.\n\n' ...
     'Press any key to continue with the second part.'];
 cfg.mem.resume_text = ['The memory test was interrupted.\n' ...
@@ -123,18 +119,56 @@ cfg.mem.resume_text = ['The memory test was interrupted.\n' ...
 cfg.mem.loading_text = 'Loading images...';
 cfg.mem.end_text     = 'Done! Thank you very much.';
 
+%% EEG triggers (ViewPixx pixel mode -> BioSemi)
+% The ViewPixx sends the colour of the top-left pixel to the EEG on EVERY
+% frame. All flips go through flip_trig, which draws that pixel (black = 0
+% when there is no trigger) and resets it to 0 one frame after a code, so the
+% trigger lines always go 0 -> code -> 0.
+% Codes are defined HERE ONLY. get_cfg checks them and writes them to
+% trigger_codes.txt (cfg.triggers.codes_file), the reference for the analysis.
+%
+% Bit scheme (8 bits, 1-255; project note "More on triggers"):
+%   128 = image onset    64 = block start    16 = fixation onset    (space presses: no trigger)
+%   Image onsets (same codes on both days): 128 + category number (1-9, bits 1-8),
+%     +32 if the image is not a target: foil (Day 2), or the catch flower (Day 1, 160)
+%     -> target 129-137, foil 161-169, flower 160. First/second image of a
+%        Day 2 pair follows from the order; condition from block start / fixation.
+%     1 = high interference, 2 = low interference (with 64 or 16)
+%   8-15 (00001xxx) = other events: experiment start/end/resume, block end,
+%                     Day 2 choice screen
+% Never use 0 (= no trigger) or 6 (what the gray background decodes to).
+cfg.triggers.enabled = true;   % false = pixel always black (testing without EEG)
+cfg.triggers.bg_code = 6;      % gray background on the ViewPixx; not allowed as a code
+
+cfg.triggers.experiment_start  = 8;    % start screen (after the EEG recording is confirmed)
+cfg.triggers.experiment_end    = 9;    % end screen
+cfg.triggers.block_end         = 10;   % after the last ISI of a block
+cfg.triggers.experiment_resume = 11;   % resume screen, instead of experiment_start
+cfg.triggers.block_start = struct('high',  65, 'low',  66);  % fixation before the first image of a block
+cfg.triggers.category_names = {'Animals', 'Clothing_Accessories', 'Electronic_device_Appliance', ...
+    'Fruit_Veggies', 'Furniture_Home_decor', 'Kitchenware', 'Musical_Instruments', ...
+    'Tools', 'Vehicles'};      % category number = position here (1-9); names as in stimuli_list.csv
+cfg.triggers.target_base = 128;    % target image onset = 128 + category number (129-137), both days
+cfg.triggers.foil_base   = 160;    % foil image onset (Day 2) = 160 + category number (161-169)
+cfg.triggers.catch_image = 160;    % catch (flower) image onset (Day 1), both conditions
+cfg.triggers.fixation    = struct('high',  17, 'low',  18);  % fixation onset (Day 1: image offset; Day 2: ITI and ISI)
+% Day 2 memory test: all codes above (on Day 2 the first ITI of a block sends
+% block_start instead of fixation), plus:
+cfg.triggers.mem_choice_screen = 12;   % "first or second?" (= image 2 offset)
+
+cfg.triggers.codes_file = fullfile(cfg.experiment_root, 'trigger_codes.txt');
+write_trigger_codes(cfg);      % checks the codes (1-255, unique, not 6) and writes the file
+
 %% Response keys
 if exist('KbName', 'file')                 % Psychtoolbox installed
     KbName('UnifyKeyNames');               % same key names on Mac, Windows and Linux
     cfg.keys.Quit     = KbName('ESCAPE');
     cfg.keys.respond  = KbName('space');  % press space when a catch image (flower) appears
     cfg.keys.choice   = KbName(cfg.mem.choice_keys);
-    cfg.keys.conf     = KbName(cfg.mem.conf_keys);
 else                                       % no Psychtoolbox: settings and sequences still work,
     cfg.keys.Quit     = NaN;               % presenting (run_encoding / run_memory) does not
     cfg.keys.respond  = NaN;
     cfg.keys.choice   = nan(1, numel(cfg.mem.choice_keys));
-    cfg.keys.conf     = nan(1, numel(cfg.mem.conf_keys));
     warning('Psychtoolbox not found: key codes set to NaN. You can build sequences, but not run the experiment.');
 end
 

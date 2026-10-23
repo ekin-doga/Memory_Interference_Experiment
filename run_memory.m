@@ -1,11 +1,13 @@
-% RUN_MEMORY - Day 2 memory test (2AFC with confidence rating)
+% RUN_MEMORY - Day 2 memory test (2AFC)
 %
 %   1. get_cfg                  - settings (cfg.mem: timing, keys, texts)
 %   2. participant folder       - Participants/sub-XXX from Day 1
 %   3. load Stimulus_lists/stimuli_sub-XXX.csv
 %   4. create_memory_sequence   - one trial per target-foil pair; conditions in
 %                                 separate blocks, same order as at encoding
-%   5. set_screen               - open the window, preload the images
+%      add_triggers_memory      - expected EEG trigger codes per trial
+%   5. ask_eeg_started / set_screen - confirm the EEG recording runs, open the
+%                                 window, preload the images
 %   6. run_memory_block         - per condition, with a break in between
 %
 % Output in Participants/sub-XXX/:
@@ -53,6 +55,7 @@ stim_list = readtable(list_file, 'TextType', 'char');
 
 %% 4. Test sequence
 mseq = create_memory_sequence(stim_list, cfg, subj_id);
+mseq = add_triggers_memory(mseq, cfg);   % expected EEG trigger codes (trig_iti ... trig_choice)
 
 % same condition order as Day 1?
 enc_files = dir(fullfile(sub_dir, sprintf('sub-%03d_encoding_sequence_*.csv', subj_id)));
@@ -66,22 +69,22 @@ else
 end
 
 for v = {'onset1', 'offset1', 'onset2', 'choice_onset', 'choice', 'choice_rt', ...
-         'correct', 'conf_onset', 'confidence', 'conf_rt'}
+         'correct'}
     mseq.(v{1}) = nan(height(mseq), 1);
 end
 mseq = addvars(mseq, repmat(subj_id, height(mseq), 1), repmat({session_date}, height(mseq), 1), ...
     'Before', 1, 'NewVariableNames', {'subj_id', 'session_date'});
 
 if resume
-    % continue with the saved sequence: trials with a confidence rating are done
+    % continue with the saved sequence: trials with a choice are done
     old = load(results_file, 'mseq');
     if height(old.mseq) ~= height(mseq) || ~isequal(old.mseq.first_id, mseq.first_id) ...
             || ~isequal(old.mseq.second_id, mseq.second_id)
         error(['The saved memory results of participant %d do not match the sequence made now ' ...
                '(was get_cfg changed, e.g. max_images_per_block?).'], subj_id);
     end
-    mseq = old.mseq;
-    n_done = sum(~isnan(mseq.confidence));
+    mseq = add_triggers_memory(old.mseq, cfg);   % (re)adds the trigger columns
+    n_done = sum(~isnan(mseq.choice));
     if n_done == height(mseq)
         error('Participant %d already finished the memory test; nothing to resume.', subj_id);
     end
@@ -94,7 +97,12 @@ end
 pool_dir = fullfile(cfg.stimuli_dir, 'Selection20_resized');
 
 try
-    %% 5. Screen
+    %% 5. EEG recording and screen
+    ask_eeg_started();                   % y/n/q in the command window (q = quit)
+    if windowed && cfg.triggers.enabled
+        warning(['Windowed mode: for testing only. Record EEG in fullscreen ' ...
+                 '(the macOS compositor can change the trigger pixel and the timing).']);
+    end
     [scr, win] = set_screen(2, double(windowed), cfg);
     ppd    = scr.pixperdeg;
     img_px = round(cfg.img_size_deg * ppd);
@@ -112,7 +120,7 @@ try
 
     % preload every image once
     DrawFormattedText(win, cfg.mem.loading_text, 'center', 'center', 0);
-    Screen('Flip', win);
+    flip_trig(win, cfg, 0);
     ids   = [mseq.first_id; mseq.second_id];
     paths = [mseq.first_path; mseq.second_path];
     [uids, first] = unique(ids);
@@ -124,30 +132,35 @@ try
     E.tex2 = cellfun(@(id) tex_map(id), mseq.second_id);
 
     %% Instructions (after an interruption: a resume screen first)
+    % (trigger: experiment_start with the instructions, or experiment_resume
+    % with the resume screen after an interruption)
     if resume
         DrawFormattedText(win, cfg.mem.resume_text, 'center', 'center', 0);
-        Screen('Flip', win);
+        flip_trig(win, cfg, cfg.triggers.experiment_resume);
         wait_key(cfg);
+        start_code = 0;
+    else
+        start_code = cfg.triggers.experiment_start;
     end
     DrawFormattedText(win, cfg.mem.instruction_text, 'center', 'center', 0);
-    Screen('Flip', win);
+    flip_trig(win, cfg, start_code);
     wait_key(cfg);
 
     %% 6. Blocks (one per condition)
     blocks = unique(mseq.block)';
-    blocks = blocks(arrayfun(@(b) any(isnan(mseq.confidence(mseq.block == b))), blocks)); % not done yet
+    blocks = blocks(arrayfun(@(b) any(isnan(mseq.choice(mseq.block == b))), blocks)); % not done yet
     for k = 1:numel(blocks)
         mseq = run_memory_block(E, mseq, blocks(k));
 
         if k < numel(blocks)
             DrawFormattedText(win, cfg.mem.part_break_text, 'center', 'center', 0);
-            Screen('Flip', win);
+            flip_trig(win, cfg, 0);
             wait_key(cfg);
         end
     end
 
     DrawFormattedText(win, cfg.mem.end_text, 'center', 'center', 0);
-    Screen('Flip', win);
+    flip_trig(win, cfg, cfg.triggers.experiment_end);
     WaitSecs(2);
 
     Screen('Close');

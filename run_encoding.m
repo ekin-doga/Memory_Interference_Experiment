@@ -5,7 +5,9 @@
 %   3. load Stimulus_lists/stimuli_sub-XXX.csv - targets/foils for this participant
 %      (pre-made with create_stimuli_list_balanced; never regenerated here)
 %   4. create_sequence               - trial order, conditions kept separate
-%   5. set_screen                    - open the window, preload the images
+%      add_triggers_encoding         - expected EEG trigger codes per trial
+%   5. ask_eeg_started / set_screen  - confirm the EEG recording runs, open the
+%                                      window, preload the images
 %   6. run_encoding_high / run_encoding_low
 %                                    - one condition after the other
 
@@ -43,6 +45,7 @@ end
 stim_list = readtable(list_file, 'TextType', 'char');
 fprintf('Loaded %s (concept set %d)\n', list_file, stim_list.concept_set(1));
 seq       = create_sequence(stim_list, cfg, subj_id);
+seq       = add_triggers_encoding(seq, cfg);   % expected EEG trigger codes (trig_image, trig_fix)
 seq.onset  = nan(height(seq), 1);    % measured image onset (GetSecs time)
 seq.offset = nan(height(seq), 1);    % measured image offset
 seq.key_time = nan(height(seq), 1);  % first space press during this trial (GetSecs time)
@@ -57,7 +60,7 @@ if resume
         error(['The saved results of participant %d do not match the sequence made now ' ...
                '(was get_cfg changed, e.g. max_images_per_block or high_order?).'], subj_id);
     end
-    seq = old.seq;
+    seq = add_triggers_encoding(old.seq, cfg);   % (re)adds the trigger columns
     n_done = sum(~isnan(seq.offset));
     if n_done == height(seq)
         error('Participant %d already finished encoding; nothing to resume.', subj_id);
@@ -71,7 +74,12 @@ end
 pool_dir = fullfile(cfg.stimuli_dir, 'Selection20_resized');
 
 try
-    %% 5. Screen
+    %% 5. EEG recording and screen
+    ask_eeg_started();                   % y/n/q in the command window (q = quit)
+    if windowed && cfg.triggers.enabled
+        warning(['Windowed mode: for testing only. Record EEG in fullscreen ' ...
+                 '(the macOS compositor can change the trigger pixel and the timing).']);
+    end
     [scr, win] = set_screen(2, double(windowed), cfg);
     ppd = scr.pixperdeg;
 
@@ -94,7 +102,7 @@ try
     % preload every image once (targets are shown cfg.repeat times, catch
     % flowers several times per block)
     DrawFormattedText(win, cfg.enc.loading_text, 'center', 'center', 0);
-    Screen('Flip', win);
+    flip_trig(win, cfg, 0);
     [ids, first] = unique(seq.image_id);
     tex_map = containers.Map();
     for k = 1:numel(ids)
@@ -114,10 +122,11 @@ try
     end
 
     %% Start screen (after an interruption: the resume screen instead)
+    % (trigger: experiment_start, or experiment_resume after an interruption)
     if resume
-        show_text_with_catch(E, cfg.enc.resume_text);
+        show_text_with_catch(E, cfg.enc.resume_text, cfg.triggers.experiment_resume);
     else
-        show_text_with_catch(E, cfg.enc.instruction_text);
+        show_text_with_catch(E, cfg.enc.instruction_text, cfg.triggers.experiment_start);
     end
     wait_key(cfg);
 
@@ -139,7 +148,7 @@ try
     seq = parts{2}(E, seq);
 
     DrawFormattedText(win, cfg.enc.end_text, 'center', 'center', 0);
-    Screen('Flip', win);
+    flip_trig(win, cfg, cfg.triggers.experiment_end);
     WaitSecs(2);
 
     Screen('Close');
