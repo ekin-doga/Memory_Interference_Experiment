@@ -29,7 +29,7 @@ cfg.blocks_per_switch = 2;   % -> H H L L ... (16 blocks), "half done" break aft
 
 % TESTING ONLY: show at most this many images per block ([] = all 150).
 % Set back to [] for the real experiment!
-cfg.max_images_per_block = 100;
+cfg.max_images_per_block = [];
 
 %% Timing
 cfg.stim_dur  = 0.500;              % stimulus duration (s)
@@ -52,7 +52,7 @@ cfg.catch.isi       = 1.500;   % ISI after a flower (s), instead of ISI_vals: mo
                                % space press (and its EEG artefacts) before the next image
 
 %% Display
-cfg.refresh_hz      = 120;   % refresh rate of the session (Hz), e.g. 120 or 60.
+cfg.refresh_hz      = 60;    % refresh rate of the session (Hz), e.g. 120 or 60.
                              % Fullscreen: the script switches the display to this rate
                              % before the window opens and switches it back at the end
                              % (also after ESC/errors); the session stops if the screen
