@@ -4,7 +4,7 @@ function ask_eeg_started()
 % also when resuming (the recording may have been stopped).
 %   y - recording is running, continue
 %   n - reminder to start it, then asks again
-%   q - quit (error 'encoding:quit'; nothing is shown, data so far is kept)
+%   q - quit (error 'session:quit'; nothing is shown, data so far is kept)
 while true
     r = input('Has the EEG recording been started? [y/n/q] ', 's');
     if strcmpi(r, 'y')
@@ -12,7 +12,7 @@ while true
     elseif strcmpi(r, 'n')
         disp('Please start the EEG recording first.');
     elseif strcmpi(r, 'q')
-        error('encoding:quit', 'Stopped before the start: EEG recording not confirmed.');
+        error('session:quit', 'Stopped before the start: EEG recording not confirmed.');
     else
         disp('Invalid input. Please enter y, n or q.');
     end

@@ -3,15 +3,15 @@
 %   1. get_cfg                       - settings
 %   2. create_participant / ask_resume - participant folder; resume or overwrite earlier data
 %   3. load Stimulus_lists/stimuli_sub-XXX.csv - targets/foils for this participant
-%      (pre-made with create_stimuli_list_balanced; never regenerated here)
-%   4. create_sequence               - trial order, conditions kept separate
+%   4. create_sequence               - trial order; one condition per block, conditions
+%                                      alternate every cfg.blocks_per_switch blocks
 %      add_triggers_encoding         - expected EEG trigger codes per trial
 %   5. ask_eeg_started / set_screen  - confirm the EEG recording runs, open the
 %                                      window, preload the images
-%   6. run_encoding_high / run_encoding_low
-%                                    - one condition after the other
+%   6. present_block                 - every block, with a break screen in between
+%                                      (halfway: cfg.enc.half_break_text)
 
-%      (odd subj_id: high first; even subj_id: low first) % recondider this
+%   (odd subj_id: high first; even subj_id: low first) 
 %   
 
 
@@ -58,7 +58,7 @@ if resume
     old = load(results_file, 'seq');
     if height(old.seq) ~= height(seq) || ~isequal(old.seq.image_id, seq.image_id)
         error(['The saved results of participant %d do not match the sequence made now ' ...
-               '(was get_cfg changed, e.g. max_images_per_block or high_order?).'], subj_id);
+               '(was get_cfg changed, e.g. max_images_per_block, repeat or blocks_per_switch?).'], subj_id);
     end
     seq = add_triggers_encoding(old.seq, cfg);   % (re)adds the trigger columns
     n_done = sum(~isnan(seq.offset));
@@ -128,24 +128,25 @@ try
     else
         show_text_with_catch(E, cfg.enc.instruction_text, cfg.triggers.experiment_start);
     end
-    wait_key(cfg);
+    wait_space_queue(cfg);               % SPACE only, via the same key queues as the blocks
 
-    %% 6. Conditions, one after the other
-    if strcmp(seq.condition{1}, 'high')
-        parts = {@run_encoding_high, @run_encoding_low};
-    else
-        parts = {@run_encoding_low, @run_encoding_high};
+    %% 6. Blocks in session order (conditions alternate, see create_sequence),
+    % with a break screen between blocks; blocks already shown (resume) are skipped.
+    % After the middle block the break says that half is done.
+    n_blocks = max(seq.block);
+    blocks = unique(seq.block)';
+    blocks = blocks(arrayfun(@(b) any(isnan(seq.offset(seq.block == b))), blocks)); % not done yet
+    for k = 1:numel(blocks)
+        seq = present_block(E, seq, blocks(k));
+        if k < numel(blocks)
+            if blocks(k) == n_blocks / 2
+                show_text_with_catch(E, cfg.enc.half_break_text);
+            else
+                show_text_with_catch(E, sprintf(cfg.enc.block_break_text, blocks(k), n_blocks));
+            end
+            wait_for_keys(cfg);
+        end
     end
-
-    first_done = all(~isnan(seq.offset(strcmp(seq.condition, seq.condition{1}))));
-    seq = parts{1}(E, seq);              % skips blocks/images already shown
-
-    if ~first_done                       % no break if resuming in the second part
-        show_text_with_catch(E, cfg.enc.part_break_text);
-        wait_key(cfg);
-    end
-
-    seq = parts{2}(E, seq);
 
     DrawFormattedText(win, cfg.enc.end_text, 'center', 'center', 0);
     flip_trig(win, cfg, cfg.triggers.experiment_end);
@@ -165,8 +166,17 @@ catch err
     % every image shown so far, so load it back
     if isfile(results_file)
         load(results_file, 'seq');
+        % scored CSV with everything shown so far (otherwise the CSV would
+        % only have the blocks finished before the stop); a problem here
+        % must not hide the original error
+        try
+            writetable(score_catch(seq, cfg), results_csv);
+            fprintf('Results CSV updated: %s\n', results_csv);
+        catch csv_err
+            warning('Could not write the results CSV: %s', csv_err.message);
+        end
     end
-    if ~strcmp(err.identifier, 'encoding:quit')
+    if ~strcmp(err.identifier, 'session:quit')
         rethrow(err);
     end
     disp(err.message);

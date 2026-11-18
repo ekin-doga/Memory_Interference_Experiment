@@ -1,6 +1,6 @@
 # EEG trigger codes (ViewPixx pixel mode -> BioSemi)
 # Written by get_cfg.m - do not edit here, change the codes in get_cfg.m.
-# 0 = no trigger. 6 = gray background (only if a frame was flipped without the pixel).
+# 0 = no trigger.
 # Every code lasts one frame and is followed by 0.
 #
 # code  bits      name                                pixel RGB (0-255)

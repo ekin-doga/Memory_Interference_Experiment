@@ -137,14 +137,14 @@ try
     if resume
         DrawFormattedText(win, cfg.mem.resume_text, 'center', 'center', 0);
         flip_trig(win, cfg, cfg.triggers.experiment_resume);
-        wait_key(cfg);
+        wait_for_keys(cfg);
         start_code = 0;
     else
         start_code = cfg.triggers.experiment_start;
     end
     DrawFormattedText(win, cfg.mem.instruction_text, 'center', 'center', 0);
     flip_trig(win, cfg, start_code);
-    wait_key(cfg);
+    wait_for_keys(cfg);
 
     %% 6. Blocks (one per condition)
     blocks = unique(mseq.block)';
@@ -155,7 +155,7 @@ try
         if k < numel(blocks)
             DrawFormattedText(win, cfg.mem.part_break_text, 'center', 'center', 0);
             flip_trig(win, cfg, 0);
-            wait_key(cfg);
+            wait_for_keys(cfg);
         end
     end
 
@@ -176,7 +176,7 @@ catch err
     if isfile(results_file)
         load(results_file, 'mseq');
     end
-    if ~any(strcmp(err.identifier, {'memory:quit', 'encoding:quit'}))
+    if ~strcmp(err.identifier, 'session:quit')
         rethrow(err);
     end
     disp(err.message);

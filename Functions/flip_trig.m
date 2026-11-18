@@ -3,7 +3,7 @@ function vbl = flip_trig(win, cfg, code, when)
 %
 % Draw the screen as usual, then call flip_trig instead of Screen('Flip').
 % Because every flip draws the pixel, a flip without a trigger cannot send
-% the gray background (= code 6) by accident.
+% the background colour as a trigger by accident.
 %
 %   code = 0 -> black pixel (no trigger), one normal flip
 %   code > 0 -> the frame shown at 'when' sends the code; the next frame

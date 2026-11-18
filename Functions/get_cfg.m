@@ -17,22 +17,15 @@ cfg.experiment_root = fileparts(functions_dir);  % Parent of Functions/
 cfg.stimuli_dir       = fullfile(cfg.experiment_root, 'Stimuli');
 cfg.participants_dir  = fullfile(cfg.experiment_root, 'Participants');
 
-% Stimulus database (same pool as original experiment)
-cfg.path_to_table    = fullfile(cfg.stimuli_dir, 'stim_list.csv');
-cfg.stimuli_subfolder = 'stimuli_all';
-
 %% Experiment settings
 
-cfg.repeat      = 1;      % blocks per condition: each target is shown this many times (10 for the real sessions)
-cfg.n_condition = 2;      % high and low interference, run separately (all high blocks, then all low, or reverse)
+cfg.repeat      = 8;      % blocks per condition: each target is shown this many times
 
-% Order of images within each HIGH-interference block:
-%   'random'  - all 150 images fully shuffled; exemplars of a concept can appear anywhere
-%   'grouped' - the 10 exemplars of a concept are shown one after another; the order of
-%               the 15 concepts (and of the exemplars within each concept) is reshuffled
-%               in every repetition
-% Low-interference blocks are always fully shuffled.
-cfg.high_order = 'grouped';
+% Conditions alternate in runs of this many blocks, e.g. repeat = 10 and
+% blocks_per_switch = 2: H H L L H H L L ... (20 blocks; odd subj_id starts
+% with high, even with low). Must divide repeat. blocks_per_switch = repeat
+% gives all blocks of one condition, then all of the other.
+cfg.blocks_per_switch = 2;   % -> H H L L ... (16 blocks), "half done" break after block 8
 
 % TESTING ONLY: show at most this many images per block ([] = all 150).
 % Set back to [] for the real experiment!
@@ -40,20 +33,23 @@ cfg.max_images_per_block = 100;
 
 %% Timing
 cfg.stim_dur  = 0.500;              % stimulus duration (s)
-cfg.ISI_vals  = [0.900, 1.000, 1.100];  % possible ISI durations (s), sampled randomly per trial
+cfg.ISI_vals  = [1.000, 1.100, 1.200];  % possible ISI durations (s), sampled randomly per trial
+                                        % (min onset-to-onset 1.5 s: room for time-frequency padding)
+cfg.block_start_fix = 1.500;        % fixation before the first image of a block (s): after the key
+                                    % press that ends the break (also after a resume)
 
 %% Attention check (Day 1 encoding): catch images
 % A few flower images are mixed into every encoding block; participants press
 % space whenever they see a flower. Same flowers, same number per block in
 % both conditions. Catch trials are never the first or last trial of a block,
 % never back to back, and spread evenly over the block (one per segment).
-% Placement ignores concepts: in 'grouped' high-interference blocks a flower
-% can also appear in the middle of a concept's run of exemplars.
 cfg.catch.dir       = fullfile(cfg.stimuli_dir, 'Catch');
 cfg.catch.files     = {'flower_01b.jpg', 'flower_14s.jpg', 'flower_16s.jpg', 'flower_19s.jpg'};
 cfg.catch.per_image = 1;       % times each flower is shown per block (1 -> 4 catch trials per block)
 cfg.catch.rt_window = [0.150, 2.000];   % a space press this long after catch onset (s) counts as a hit;
                                         % any other press is a false alarm
+cfg.catch.isi       = 1.500;   % ISI after a flower (s), instead of ISI_vals: more time for the
+                               % space press (and its EEG artefacts) before the next image
 
 %% Display
 cfg.vdist           = 55;    % viewing distance (cm)
@@ -68,10 +64,12 @@ cfg.catch.example_gap_deg  = 1;  % space between the last text line and the flow
 cfg.fix_size_deg  = 0.6;     % fixation point diameter (Thaler et al., 2013:
                              % 0.6 deg outer circle, 0.2 deg centre dot)
 cfg.fix_color     = [0 0 0]; % fixation point color (0-1 range), black
+cfg.bg_rgb        = [128 128 128];  % background gray, 0-255 (integers, so the
+                             % display shows exactly this value; white/2 = 127.5 had to be rounded)
 
 %% Day 1 encoding: text shown to participants (English for now)
 % \n = new line. block_break_text gets the block number and the number of
-% blocks (the two %d). The flowers are drawn under the start and break
+% blocks in the session (the two %d). The flowers are drawn under the start and break
 % screens automatically (show_text_with_catch).
 cfg.enc.loading_text = 'Loading images...';
 cfg.enc.catch_text = 'Whenever you see one of these FLOWER images, press SPACE.';
@@ -79,17 +77,18 @@ cfg.enc.instruction_text = ['Images will appear one after the other.\n\n' ...
     'Instructions - memory will be tested.\n' ...
     'Instructions - fixation cross.\n\n' ...
     cfg.enc.catch_text '\n\n' ...
-    'Press any key to start.'];
+    'Press SPACE to start.'];          % only space works here (checks the key queue, wait_space_queue)
 cfg.enc.block_break_text = ['Break\n\nBlock %d of %d done.\n\n' ...
     cfg.enc.catch_text '\n\n' ...
     'Press any key to continue.'];
-cfg.enc.part_break_text = ['Break\n\nThe first half is done.\n\n' ...
+cfg.enc.half_break_text = ['Break\n\nHalf of the experiment is done!\n' ...
+    'Take a short break.\n\n' ...
     cfg.enc.catch_text '\n\n' ...
-    'Press any key to continue.'];
-cfg.enc.resume_text = ['The experiment was interrupted.\n' ...
+    'Press any key when you are ready to continue.'];   % instead of block_break_text after the middle block
+cfg.enc.resume_text =['The experiment was interrupted.\n' ...
     'It will continue from where it stopped.\n\n' ...
     cfg.enc.catch_text '\n\n' ...
-    'Press any key to continue.'];      % shown instead of instruction_text when resuming
+    'Press SPACE to continue.'];        % shown instead of instruction_text when resuming (space only)
 cfg.enc.end_text = 'Done! Thank you very much.';
 
 %% Day 2 memory test (run_memory)
@@ -136,9 +135,8 @@ cfg.mem.end_text     = 'Done! Thank you very much.';
 %     1 = high interference, 2 = low interference (with 64 or 16)
 %   8-15 (00001xxx) = other events: experiment start/end/resume, block end,
 %                     Day 2 choice screen
-% Never use 0 (= no trigger) or 6 (what the gray background decodes to).
+% Never use 0 (= no trigger).
 cfg.triggers.enabled = true;   % false = pixel always black (testing without EEG)
-cfg.triggers.bg_code = 6;      % gray background on the ViewPixx; not allowed as a code
 
 cfg.triggers.experiment_start  = 8;    % start screen (after the EEG recording is confirmed)
 cfg.triggers.experiment_end    = 9;    % end screen
@@ -157,7 +155,7 @@ cfg.triggers.fixation    = struct('high',  17, 'low',  18);  % fixation onset (D
 cfg.triggers.mem_choice_screen = 12;   % "first or second?" (= image 2 offset)
 
 cfg.triggers.codes_file = fullfile(cfg.experiment_root, 'trigger_codes.txt');
-write_trigger_codes(cfg);      % checks the codes (1-255, unique, not 6) and writes the file
+write_trigger_codes(cfg);      % checks the codes (1-255, unique) and writes the file
 
 %% Response keys
 if exist('KbName', 'file')                 % Psychtoolbox installed

@@ -6,7 +6,7 @@ function show_text_with_catch(E, txt, code)
 % are centred on the screen as one group, with cfg.catch.example_gap_deg
 % between the last text line and the flowers. Used for the Day 1 start
 % screen and the break screens, so participants always know which pictures
-% need a space press. The caller waits for the key press (wait_key).
+% need a space press. The caller waits for the key press (wait_for_keys).
 %
 % Flower size: cfg.catch.example_size_deg (smaller than in the blocks). If
 % text and flowers do not fit the window (e.g. the 900x700 test window), the

@@ -3,13 +3,14 @@ function seq = present_block(E, seq, b)
 %
 % Each trial: image (cfg.stim_dur) without fixation point, then fixation
 % point only for the trial's ISI. Starts
-% with 1 s of fixation. Stores the measured onset/offset of each image in
+% with cfg.block_start_fix (1.5 s) of fixation. Stores the measured onset/offset of each image in
 % seq, saves the results .mat after every image (during the ISI), and prints the
 % measured image durations. Images that already have an offset (when
 % resuming) are skipped.
 %
-% Key presses are collected with a PTB key queue, so a press is never missed,
-% also not during the image. The first space press per trial goes into
+% Key presses are collected with PTB key queues on all keyboards (kb_queue),
+% so a press is never missed, also not during the image, whichever keyboard
+% the participant uses. The first space press per trial goes into
 % seq.key_time (GetSecs time) and seq.key_rt (relative to that trial's
 % image onset); a press during the image or ISI of trial t counts for trial t.
 % Hits/false alarms for the catch trials are scored afterwards with
@@ -22,11 +23,11 @@ function seq = present_block(E, seq, b)
 %   seq - trial sequence (from create_sequence)
 %   b   - block number
 %
-% ESC during the block stops the session (error 'encoding:quit').
+% ESC during the block stops the session (error 'session:quit').
 %
 % EEG triggers (codes in get_cfg, cfg.triggers; every flip goes through
 % flip_trig, so each code is followed by 0 one frame later):
-%   block_start.<cond>  1 s fixation before the first image
+%   block_start.<cond>  fixation before the first image (cfg.block_start_fix)
 %   seq.trig_image      image onset (target 128 + category number, flower 160)
 %   seq.trig_fix        image offset = fixation (ISI) onset
 %   (both columns are made by add_triggers_encoding)
@@ -49,13 +50,12 @@ n_blocks_c = max(seq.repeat);
 cond       = seq.condition{in_block(1)};                  % 'high' or 'low'
 tr         = cfg.triggers;
 
-KbQueueCreate(cfg.deviceIndex);
-KbQueueStart(cfg.deviceIndex);
-queue_cleanup = onCleanup(@() KbQueueRelease(cfg.deviceIndex)); %#ok<NASGU>
+kb_queue('start');                            % key queues on ALL keyboards
+queue_cleanup = onCleanup(@() kb_queue('stop')); %#ok<NASGU>
 
 E.draw_fix();
 vbl = flip_trig(win, cfg, tr.block_start.(cond));
-next_onset = vbl + 1.0;                       % 1 s fixation before the block
+next_onset = vbl + cfg.block_start_fix;       % fixation before the first image (after the break key press)
 
 for t = trials
     % image (no fixation point on top)
@@ -81,10 +81,10 @@ for t = trials
 
     % collect key presses while waiting (ESC stops, space = catch response)
     while GetSecs < next_onset - 0.05
-        [pressed, first_press] = KbQueueCheck(cfg.deviceIndex);
+        [pressed, first_press] = kb_queue('check');
         if pressed
             if first_press(cfg.keys.Quit)
-                error('encoding:quit', 'Session stopped with ESC (block %d, trial %d).', b, t);
+                error('session:quit', 'Session stopped with ESC (block %d, trial %d).', b, t);
             end
             if first_press(cfg.keys.respond) && isnan(seq.key_time(t))
                 seq.key_time(t) = first_press(cfg.keys.respond);

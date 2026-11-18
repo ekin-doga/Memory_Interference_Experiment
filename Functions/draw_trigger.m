@@ -5,9 +5,8 @@ function draw_trigger(win, cfg, code)
 % calls it on every flip and resets the pixel to 0 one frame after a code.
 %
 % On the ViewPixx (pixel mode) the colour of the top-left pixel goes to the
-% EEG as a trigger on every frame. The gray background decodes to 6, so the
-% pixel must be drawn on every flip, also when there is no trigger (code 0 =
-% black).
+% EEG as a trigger on every frame, so the pixel must be drawn on every flip,
+% also when there is no trigger (code 0 = black).
 %
 %   code = 0                     -> black pixel (no trigger)
 %   cfg.triggers.enabled = false -> always a black pixel

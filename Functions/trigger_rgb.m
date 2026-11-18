@@ -1,9 +1,8 @@
 function rgb = trigger_rgb(code)
 % TRIGGER_RGB - Colour (0-255) of the trigger pixel for a trigger code
 %
-% Same encoding as drawTriggerPixelInternal in
-% Functions_Old_Experiment/ViewPixxTrigger.m (ViewPixx pixel mode, BioSemi
-% cable with pins 2-9 -> 1-8). Only the encoding is here; draw_trigger
+% Same encoding as drawTriggerPixelInternal in ViewPixxTrigger.m from the
+% earlier experiment (ViewPixx pixel mode, BioSemi cable with pins 2-9 -> 1-8). Only the encoding is here; draw_trigger
 % draws the pixel.
 %
 % INPUT:

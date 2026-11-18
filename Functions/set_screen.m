@@ -23,7 +23,7 @@ else
 end
 
 white = WhiteIndex(screen_ID);   % 1 with PsychDefaultSetup(2)
-bg    = white / 2;               % gray background
+bg    = cfg.bg_rgb / 255 * white; % gray background (cfg.bg_rgb is 0-255, exact on an 8-bit display)
 
 if W == 0
     % Fullscreen: strict timing checks, top priority, no cursor
@@ -38,7 +38,7 @@ else
 end
 
 % trigger pixel to 0 straight away: until something draws it, it shows the
-% gray background, which the ViewPixx sends as code 6
+% background colour, which the ViewPixx would send as a trigger
 flip_trig(window, cfg, 0);
 
 [center_X, center_Y] = RectCenter(windowRect);
