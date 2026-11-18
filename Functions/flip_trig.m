@@ -31,8 +31,11 @@ draw_trigger(win, cfg, code);
 if code == 0
     vbl = Screen('Flip', win, when);
 else
-    vbl = Screen('Flip', win, when, 1);     % 1 = keep the picture for the reset frame
+    [vbl, ~, ~, missed] = Screen('Flip', win, when, 1);   % 1 = keep the picture for the reset frame
     draw_trigger(win, cfg, 0);
     Screen('Flip', win, vbl + 0.5 * Screen('GetFlipInterval', win));
+    % backup log of every code sent (memory only here); missed > 0 = PTB
+    % reports the frame came later than requested (dropped frame)
+    trigger_log('add', code, vbl, missed > 0);
 end
 end

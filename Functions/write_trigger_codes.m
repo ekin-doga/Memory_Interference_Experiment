@@ -7,34 +7,8 @@ function write_trigger_codes(cfg)
 %
 % Errors if a code is outside 1-255 or is used twice.
 
-tr    = cfg.triggers;
-skip  = {'enabled', 'codes_file', 'category_names', 'target_base', 'foil_base'};
-names = {};
-codes = [];
-% image onsets: one code per category for targets and for foils
-for k = 1:numel(tr.category_names)
-    names{end + 1} = sprintf('target.%s', tr.category_names{k}); %#ok<AGROW>
-    codes(end + 1) = tr.target_base + k;                         %#ok<AGROW>
-    names{end + 1} = sprintf('foil.%s', tr.category_names{k});   %#ok<AGROW>
-    codes(end + 1) = tr.foil_base + k;                           %#ok<AGROW>
-end
-f = fieldnames(tr);
-for k = 1:numel(f)
-    if any(strcmp(f{k}, skip))
-        continue;
-    end
-    v = tr.(f{k});
-    if isstruct(v)                                % e.g. image.high, image.low
-        sub = fieldnames(v);
-        for j = 1:numel(sub)
-            names{end + 1} = sprintf('%s.%s', f{k}, sub{j}); %#ok<AGROW>
-            codes(end + 1) = v.(sub{j});                      %#ok<AGROW>
-        end
-    else
-        names{end + 1} = f{k};                                %#ok<AGROW>
-        codes(end + 1) = v;                                   %#ok<AGROW>
-    end
-end
+tr = cfg.triggers;
+[names, codes] = trigger_list(cfg);   % same names as in the trigger log
 
 bad = codes < 1 | codes > 255 | codes ~= round(codes);
 if any(bad)

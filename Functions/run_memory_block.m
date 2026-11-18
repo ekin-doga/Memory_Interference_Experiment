@@ -45,6 +45,7 @@ tr       = cfg.triggers;
 
 for k = 1:numel(trials)
     t = trials(k);
+    trigger_log('context', b, mseq.trial(t));
     % fixation (inter-trial interval)
     E.draw_fix();
     % (first trial of this run of the block: block_start, also when resuming)
@@ -92,7 +93,9 @@ end
 
 % fixation after the last trial
 E.draw_fix();
+trigger_log('context', b, NaN);
 flip_trig(win, cfg, tr.block_end);
+trigger_log('flush');
 
 all_trials = find(mseq.block == b);
 acc = mean(mseq.correct(all_trials));
@@ -106,4 +109,5 @@ function save_results(E, mseq)
 cfg = E.cfg;  scr = E.scr;  stim_list = E.stim_list; %#ok<NASGU>
 subj_id = mseq.subj_id(1);  session_date = mseq.session_date{1}; %#ok<NASGU>
 save(E.results_file, 'mseq', 'cfg', 'scr', 'stim_list', 'subj_id', 'session_date');
+trigger_log('flush');   % trigger log CSV: codes sent so far
 end

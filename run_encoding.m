@@ -35,6 +35,7 @@ prefix        = fullfile(sub_dir, sprintf('sub-%03d_encoding', subj_id));
 sequence_file = sprintf('%s_sequence_%s.csv', prefix, session_date);
 results_file  = sprintf('%s_results_%s.mat', prefix, session_date);
 results_csv   = sprintf('%s_results_%s.csv', prefix, session_date);
+trigger_file  = sprintf('%s_triggers_%s.csv', prefix, session_date);   % every EEG code sent (trigger_log)
 
 %% 3. Stimulus list and 4. sequence
 list_file = fullfile(root, 'Stimulus_lists', sprintf('stimuli_sub-%03d.csv', subj_id));
@@ -72,6 +73,9 @@ else
 end
 
 pool_dir = fullfile(cfg.stimuli_dir, 'Selection20_resized');
+
+% backup log of every trigger code sent (appended to on resume)
+trigger_log('open', trigger_file, cfg, subj_id, session_date, 'encoding');
 
 try
     %% 5. EEG recording and screen
@@ -149,11 +153,13 @@ try
     end
 
     DrawFormattedText(win, cfg.enc.end_text, 'center', 'center', 0);
+    trigger_log('context', NaN, NaN);
     flip_trig(win, cfg, cfg.triggers.experiment_end);
+    trigger_log('close');
     WaitSecs(2);
 
     Screen('Close');
-    sca; ShowCursor; Priority(0);
+    sca; ShowCursor; Priority(0); display_mode('restore');
     [seq, summary] = score_catch(seq, cfg);
     fprintf('Attention check: %d of %d flowers detected (%.0f%%), %d false alarms, mean RT %.3f s\n', ...
         summary.n_hit, summary.n_catch, 100 * summary.hit_rate, summary.n_false_alarm, summary.mean_rt);
@@ -161,7 +167,8 @@ try
     fprintf('Session finished. Results saved to %s (and .csv)\n', results_file);
 
 catch err
-    sca; ShowCursor; Priority(0);
+    sca; ShowCursor; Priority(0); display_mode('restore');
+    trigger_log('close');                % codes sent since the last save
     % seq in the workspace is only updated after a whole block; the file has
     % every image shown so far, so load it back
     if isfile(results_file)

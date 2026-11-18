@@ -54,11 +54,13 @@ kb_queue('start');                            % key queues on ALL keyboards
 queue_cleanup = onCleanup(@() kb_queue('stop')); %#ok<NASGU>
 
 E.draw_fix();
+trigger_log('context', b, NaN);
 vbl = flip_trig(win, cfg, tr.block_start.(cond));
 next_onset = vbl + cfg.block_start_fix;       % fixation before the first image (after the break key press)
 
 for t = trials
     % image (no fixation point on top)
+    trigger_log('context', b, seq.trial(t));
     Screen('DrawTexture', win, E.tex(t), [], E.img_rect);
     seq.onset(t) = flip_trig(win, cfg, seq.trig_image(t), next_onset - ifi/2);
 
@@ -98,7 +100,9 @@ save_results(E, seq);   % includes a press during the last ISI
 
 % end of block (same fixation screen, so nothing changes for the participant)
 E.draw_fix();
+trigger_log('context', b, NaN);
 flip_trig(win, cfg, tr.block_end);
+trigger_log('flush');
 
 all_trials = find(seq.block == b);
 dur = seq.offset(all_trials) - seq.onset(all_trials);
@@ -115,4 +119,5 @@ function save_results(E, seq)
 cfg = E.cfg;  scr = E.scr;  stim_list = E.stim_list; %#ok<NASGU>
 subj_id = seq.subj_id(1);  session_date = seq.session_date{1}; %#ok<NASGU>
 save(E.results_file, 'seq', 'cfg', 'scr', 'stim_list', 'subj_id', 'session_date');
+trigger_log('flush');   % trigger log CSV: codes sent so far
 end

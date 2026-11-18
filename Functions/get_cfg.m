@@ -52,6 +52,13 @@ cfg.catch.isi       = 1.500;   % ISI after a flower (s), instead of ISI_vals: mo
                                % space press (and its EEG artefacts) before the next image
 
 %% Display
+cfg.refresh_hz      = 120;   % refresh rate of the session (Hz), e.g. 120 or 60.
+                             % Fullscreen: the script switches the display to this rate
+                             % before the window opens and switches it back at the end
+                             % (also after ESC/errors); the session stops if the screen
+                             % then still runs at another rate. Windowed tests: only a
+                             % warning, nothing is switched. [] = leave the display as it is.
+                             % All timings are in seconds and fit whole frames at 60 and 120 Hz.
 cfg.vdist           = 55;    % viewing distance (cm)
 cfg.screen_width_cm = [];    % physical width of the visible screen area (cm);
                              % [] = ask the system (often wrong, so measure it
