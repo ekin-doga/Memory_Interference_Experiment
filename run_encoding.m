@@ -159,7 +159,7 @@ try
     WaitSecs(2);
 
     Screen('Close');
-    sca; ShowCursor; Priority(0); display_mode('restore');
+    sca; ShowCursor; Priority(0);
     [seq, summary] = score_catch(seq, cfg);
     fprintf('Attention check: %d of %d flowers detected (%.0f%%), %d false alarms, mean RT %.3f s\n', ...
         summary.n_hit, summary.n_catch, 100 * summary.hit_rate, summary.n_false_alarm, summary.mean_rt);
@@ -167,7 +167,7 @@ try
     fprintf('Session finished. Results saved to %s (and .csv)\n', results_file);
 
 catch err
-    sca; ShowCursor; Priority(0); display_mode('restore');
+    sca; ShowCursor; Priority(0);
     trigger_log('close');                % codes sent since the last save
     % seq in the workspace is only updated after a whole block; the file has
     % every image shown so far, so load it back

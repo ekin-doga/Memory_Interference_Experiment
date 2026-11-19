@@ -170,13 +170,13 @@ try
     WaitSecs(2);
 
     Screen('Close');
-    sca; ShowCursor; Priority(0); display_mode('restore');
+    sca; ShowCursor; Priority(0);
     writetable(mseq, results_csv);
     fprintf('Session finished. %.0f%% correct overall. Results saved to %s (and .csv)\n', ...
         100 * mean(mseq.correct, 'omitnan'), results_file);
 
 catch err
-    sca; ShowCursor; Priority(0); display_mode('restore');
+    sca; ShowCursor; Priority(0);
     trigger_log('close');                % codes sent since the last save
     % mseq in the workspace is only updated after a whole block; the file has
     % every completed trial, so load it back

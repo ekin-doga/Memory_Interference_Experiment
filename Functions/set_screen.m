@@ -7,8 +7,9 @@ function [screen_cfg, window] = set_screen(ID, W, cfg)
 %   cfg - config from get_cfg (uses cfg.bg_rgb, cfg.refresh_hz, cfg.vdist,
 %         cfg.screen_width_cm, cfg.triggers; durations for the frame check)
 %
-% Fullscreen with cfg.refresh_hz set: the display is switched to that rate
-% first (display_mode); run_encoding/run_memory switch it back after sca.
+% The refresh rate is NOT changed here: set it in the operating system
+% (Linux display settings or xrandr) before the session. Fullscreen stops
+% with an error if the measured rate is not cfg.refresh_hz.
 %
 % OUTPUTS:
 %   screen_cfg - struct with screen_ID, bg, white, windowRect, center_X,
@@ -30,10 +31,7 @@ white = WhiteIndex(screen_ID);   % 1 with PsychDefaultSetup(2)
 bg    = cfg.bg_rgb / 255 * white; % gray background (cfg.bg_rgb is 0-255, exact on an 8-bit display)
 
 if W == 0
-    % Fullscreen: refresh rate from cfg, strict timing checks, top priority, no cursor
-    if ~isempty(cfg.refresh_hz)
-        display_mode('set', screen_ID, cfg.refresh_hz);
-    end
+    % Fullscreen: strict timing checks, top priority, no cursor
     Screen('Preference', 'SkipSyncTests', 0);
     [window, windowRect] = PsychImaging('OpenWindow', screen_ID, bg);
     Priority(MaxPriority(window));
@@ -81,10 +79,10 @@ hz = 1 / ifi;
 if ~isempty(cfg.refresh_hz) && abs(hz - cfg.refresh_hz) > 1
     msg = sprintf('The screen runs at %.1f Hz, but cfg.refresh_hz = %g.', hz, cfg.refresh_hz);
     if W == 0
-        error('set_screen:refresh', '%s Switching the display did not work; set it to %g Hz in the display settings.', ...
+        error('set_screen:refresh', '%s Set the display to %g Hz in the Linux display settings (or xrandr) and start again.', ...
             msg, cfg.refresh_hz);
     end
-    warning('set_screen:refresh', '%s (windowed test: nothing is switched, continuing)', msg);
+    warning('set_screen:refresh', '%s (windowed test, continuing)', msg);
 end
 
 % every duration should be a whole number of frames, otherwise it is rounded
