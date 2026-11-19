@@ -23,9 +23,20 @@ switch action
         if abs(cur.hz - hz) <= 1
             return;                              % already at that rate
         end
+        % ask for a rate the display actually lists at this resolution
+        % (e.g. 59.95 instead of 60), closest to hz
+        modes = Screen('Resolutions', screen_ID);
+        same  = modes([modes.width] == cur.width & [modes.height] == cur.height);
+        rates = unique([same.hz]);
+        [d, k] = min(abs(rates - hz));
+        if isempty(d) || d > 1
+            error('display_mode:rate', ['Screen %d offers no %g Hz mode at %d x %d (listed: %s Hz). ' ...
+                'Set the rate in the display settings or change cfg.refresh_hz.'], ...
+                screen_ID, hz, cur.width, cur.height, mat2str(rates, 5));
+        end
         fprintf('Switching screen %d from %g Hz to %g Hz (%d x %d)...\n', ...
-            screen_ID, cur.hz, hz, cur.width, cur.height);
-        old_mode   = Screen('Resolution', screen_ID, cur.width, cur.height, hz);
+            screen_ID, cur.hz, rates(k), cur.width, cur.height);
+        old_mode   = Screen('Resolution', screen_ID, cur.width, cur.height, rates(k));
         old_screen = screen_ID;
         WaitSecs(2);                             % let the display settle in the new mode
 
@@ -34,7 +45,10 @@ switch action
             return;
         end
         try
-            Screen('Resolution', old_screen, old_mode);
+            % Screen('Resolution') takes width, height, hz as numbers, not
+            % the struct it returns (passing the struct gives "Incorrect
+            % argument type supplied")
+            Screen('Resolution', old_screen, old_mode.width, old_mode.height, old_mode.hz);
             fprintf('Screen %d set back to %g Hz.\n', old_screen, old_mode.hz);
         catch err
             warning('Could not set the screen back to %g Hz: %s', old_mode.hz, err.message);
